@@ -9,6 +9,8 @@ import SwiftUI
 
 @main
 struct PCL_MacApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate: AppDelegate
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
