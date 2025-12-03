@@ -1,0 +1,50 @@
+//
+//  SingleFileDownloader.swift
+//  PCL.Mac
+//
+//  Created by 温迪 on 2025/11/22.
+//
+
+import Foundation
+
+/// 单文件下载器。
+public enum SingleFileDownloader {
+    public static func download(_ item: DownloadItem, replaceMethod: ReplaceMethod) async throws {
+        try await download(url: item.url, destination: item.destination, sha1: item.sha1, replaceMethod: replaceMethod)
+    }
+    
+    public static func download(url: URL, destination: URL, sha1: String?, replaceMethod: ReplaceMethod) async throws {
+        // 文件已存在处理
+        if FileManager.default.fileExists(atPath: destination.path) {
+            if let sha1, try FileUtils.getSHA1(destination) != sha1 {
+                try FileManager.default.removeItem(at: destination)
+            } else {
+                switch replaceMethod {
+                case .replace:
+                    try FileManager.default.removeItem(at: destination)
+                case .skip:
+                    return
+                case .throw:
+                    throw DownloadError.fileExists
+                }
+            }
+        }
+        
+        var request: URLRequest = .init(url: url)
+        request.httpMethod = "GET"
+        try await withCheckedThrowingContinuation { continuation in
+            let delegate: DownloadDelegate = .init(destination: destination, continuation: continuation)
+            let session: URLSession = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+            let task: URLSessionDownloadTask = session.downloadTask(with: request)
+            task.resume()
+        }
+        
+        // 验证 SHA-1
+        if let sha1 {
+            guard try FileUtils.getSHA1(destination) == sha1 else {
+                try FileManager.default.removeItem(at: destination)
+                throw DownloadError.checksumMismatch
+            }
+        }
+    }
+}
