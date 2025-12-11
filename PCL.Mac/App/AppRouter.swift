@@ -8,9 +8,9 @@
 import SwiftUI
 
 enum AppRoute: Identifiable {
-    case launch, download, multiplayer, settings, other
+    case launch, download, multiplayer, settings, other, tasks
     // 下载页面的子页面
-    case downloadPage1, downloadPage2, downloadPage3
+    case minecraftDownload, downloadPage2, downloadPage3
     
     var id: String { stringValue }
     
@@ -28,22 +28,19 @@ class AppRouter: ObservableObject {
     
     @ViewBuilder
     var content: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 20) {
-                switch getLast() {
-                case .launch:
-                    LaunchView()
-                case .downloadPage1:
-                    DownloadPage1()
-                case .downloadPage2:
-                    DownloadPage2()
-                case .downloadPage3:
-                    DownloadPage3()
-                default:
-                    Spacer()
-                }
-            }
-            .padding(24)
+        switch getLast() {
+        case .launch:
+            LaunchPage()
+        case .minecraftDownload:
+            MinecraftDownloadPage()
+        case .downloadPage2:
+            DownloadPage2()
+        case .downloadPage3:
+            DownloadPage3()
+        case .tasks:
+            TasksPage()
+        default:
+            Spacer()
         }
     }
     
@@ -53,6 +50,8 @@ class AppRouter: ObservableObject {
             LaunchSidebar()
         case .download:
             DownloadSidebar()
+        case .tasks:
+            TasksSidebar()
         default:
             EmptySidebar()
         }
@@ -68,7 +67,8 @@ class AppRouter: ObservableObject {
     
     func setRoot(_ newRoot: AppRoute) {
         path = [newRoot]
-        if newRoot == .download { append(.downloadPage1) }
+        // 各根页面的默认子页面
+        if newRoot == .download { append(.minecraftDownload) }
     }
     
     func append(_ route: AppRoute) {

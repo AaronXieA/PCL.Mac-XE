@@ -8,7 +8,10 @@
 import SwiftUI
 
 struct DownloadPage2: View {
+    @EnvironmentObject private var dataManager: DataManager
     var body: some View {
-        MyText("DownloadPage2")
+        CardContainer {
+            MyText("DownloadPage2")
+        }
     }
 }

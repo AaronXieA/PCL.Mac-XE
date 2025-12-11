@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @ObservedObject private var dataManager: DataManager = .shared
+    @EnvironmentObject private var dataManager: DataManager
     @ObservedObject private var router: AppRouter = .shared
     @State private var sidebarWidth: CGFloat = AppRouter.shared.sidebar.width
     
@@ -19,7 +19,7 @@ struct ContentView: View {
                 Rectangle()
                     .fill(.white)
                     .frame(width: sidebarWidth)
-                    .overlay(AnyView(router.sidebar.content))
+                    .overlay(AnyView(router.sidebar))
                     .onChange(of: router.sidebar.width) { newValue in
                         withAnimation(.spring(response: 0.1, dampingFraction: 0.8)) {
                             sidebarWidth = newValue
