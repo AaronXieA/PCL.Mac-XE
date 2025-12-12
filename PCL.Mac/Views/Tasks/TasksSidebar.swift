@@ -31,9 +31,9 @@ private struct PanelView: View {
     
     var body: some View {
         VStack {
-            MyText(title, size: 16, color: .pclBlue)
+            MyText(title, size: 16, color: .color2)
             Rectangle()
-                .fill(Color.pclBlue)
+                .fill(Color.color2)
                 .frame(width: 180, height: 2)
             MyText(value, size: 16)
         }

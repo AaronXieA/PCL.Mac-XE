@@ -54,12 +54,12 @@ private struct TaskCard: View {
                     HStack {
                         Group {
                             if subTask.state == .executing {
-                                MyText("\(Int(subTask.progress * 100))%", color: .pclBlue)
+                                MyText("\(Int(subTask.progress * 100))%", color: .color2)
                             } else {
                                 Image(subTask.state.image)
                                     .resizable()
                                     .scaledToFit()
-                                    .foregroundStyle(Color.pclBlue)
+                                    .foregroundStyle(Color.color2)
                                     .frame(width: 20)
                             }
                         }

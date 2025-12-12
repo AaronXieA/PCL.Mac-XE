@@ -35,7 +35,7 @@ struct MyButton: View {
             VStack(spacing: 4) {
                 MyText(label, color: color)
                 if let subLabel {
-                    MyText(subLabel, size: 12, color: .init(0x8C8C8C))
+                    MyText(subLabel, size: 12, color: .colorGray3)
                 }
             }
         }
@@ -61,16 +61,16 @@ struct MyButton: View {
         
         var color: Color {
             switch self {
-            case .normal: Color(0x343D4A)
-            case .highlight: Color(0x0B5BCB)
+            case .normal: .color1
+            case .highlight: .color2
             case .red: Color(0xCE2111)
             }
         }
         
         var hoverColor: Color {
             switch self {
-            case .normal: Color(0x1370F3)
-            case .highlight: Color(0x1370F3)
+            case .normal: .color3
+            case .highlight: .color3
             case .red: Color(0xFF4C4C)
             }
         }

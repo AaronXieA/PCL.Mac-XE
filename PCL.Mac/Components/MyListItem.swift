@@ -27,7 +27,7 @@ struct MyListItem<Content: View>: View {
             .contentShape(Rectangle())
             .background {
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(hovered ? Color.pclBlue.opacity(0.1) : .clear)
+                    .fill(hovered ? Color.color2.opacity(0.1) : .clear)
                     .scaleEffect(backgroundScale)
             }
             .onHover { hovered in

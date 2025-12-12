@@ -48,7 +48,7 @@ private struct RouteView: View {
     var body: some View {
         HStack(spacing: 11) {
             RoundedRectangle(cornerRadius: 2)
-                .fill(selected ? Color(0x1370F3) : .clear)
+                .fill(selected ? Color.color3 : .clear)
                 .frame(width: 4, height: selected ? 24 : 10)
             Image(image)
                 .resizable()
@@ -59,8 +59,8 @@ private struct RouteView: View {
         }
         .frame(height: 32)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(hovered ? Color.pclBlue.opacity(0.1) : .clear)
-        .foregroundStyle(selected ? Color(0x1370F3) : Color(0x343D4A))
+        .background(hovered ? Color.color2.opacity(0.1) : .clear)
+        .foregroundStyle(selected ? Color.color3 : .color1)
         .contentShape(Rectangle())
         .onHover { hovered = $0 }
         .animation(.easeInOut(duration: 0.2), value: hovered)

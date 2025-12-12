@@ -44,7 +44,7 @@ struct MyCard<Content: View>: View {
                     }
                 }
             }
-            .foregroundStyle(hovered ? Color.pclBlue : .init(0x343D4A))
+            .foregroundStyle(hovered ? Color.color2 : .color1)
             .frame(height: titled ? 12 : 0)
             .frame(maxWidth: .infinity)
             .padding(12)
@@ -96,8 +96,8 @@ struct MyCard<Content: View>: View {
         }
         .background {
             RoundedRectangle(cornerRadius: 4)
-                .fill(Color(0xF2F5F9))
-                .shadow(color: hovered ? Color(0x1370F3, alpha: 0.6) : Color(0x000000, alpha: 0.1), radius: 6)
+                .fill(Color.colorGray8)
+                .shadow(color: hovered ? .color3.opacity(0.6) : .black.opacity(0.1), radius: 6)
         }
         .animation(.easeInOut(duration: 0.2), value: hovered)
         .onAppear {
