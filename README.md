@@ -12,4 +12,4 @@ PCL.Mac.Refactor 是 [PCL.Mac](https://github.com/CeciliaStudio/PCL.Mac) 的重�
 - ……
 
 > [!NOTE]
-> PCL.Mac.Core（`PCL.Mac.Core/`）受 MIT License 保护，使用其代码时请保留许可证及署名信息。
+> PCL.Mac.Core（`PCL.Mac.Core/`）采用 MIT License 授权，使用其代码时请保留许可证及署名信息。
