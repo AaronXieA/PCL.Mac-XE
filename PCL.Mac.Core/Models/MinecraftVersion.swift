@@ -13,7 +13,7 @@ public class MinecraftVersion: Comparable, Equatable, CustomStringConvertible {
     
     public init(_ id: String) {
         self.id = id
-        self.index = CoreState.versionManifest?.getIndex(id) ?? .max
+        self.index = CoreState.versionManifest?.ordinal(of: id) ?? .max
     }
     
     public static func == (lhs: MinecraftVersion, rhs: MinecraftVersion) -> Bool {

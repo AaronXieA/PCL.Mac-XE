@@ -8,6 +8,7 @@
 import Foundation
 import SwiftyJSON
 
+/// https://zh.minecraft.wiki/w/散列资源文件#资源索引
 public struct AssetIndex {
     public let objects: [Object]
     

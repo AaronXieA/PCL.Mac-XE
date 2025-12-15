@@ -8,9 +8,16 @@
 import Foundation
 import SwiftyJSON
 
+/// Minecraft 安装任务生成器。
 public enum MinecraftInstallTask {
     private typealias SubTask = MyTask<Model>.SubTask
     
+    /// 创建一个 Minecraft 实例安装任务。
+    /// - Parameters:
+    ///   - name: 实例名。
+    ///   - version: Minecraft 版本。
+    ///   - minecraftDirectory: 实例所在的 Minecraft 目录。
+    /// - Returns: 实例安装任务。
     public static func create(
         name: String,
         version: MinecraftVersion,
@@ -36,7 +43,7 @@ public enum MinecraftInstallTask {
             err("CoreState.versionManifest 为空")
             throw TaskError.unknownError
         }
-        guard let version = manifest.getVersion(model.version.id) else {
+        guard let version = manifest.version(for: model.version.id) else {
             err("未找到版本：\(model.version)")
             throw TaskError.unknownError
         }

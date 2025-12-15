@@ -9,6 +9,9 @@ import Foundation
 import CryptoKit
 
 public enum FileUtils {
+    /// 获取文件的 SHA-1 校验和。
+    /// - Parameter url: 文件的 `URL`。
+    /// - Returns: 文件的 SHA-1。
     public static func getSHA1(_ url: URL) throws -> String {
         let data: Data = try Data(contentsOf: url)
         let digest: Insecure.SHA1.Digest = Insecure.SHA1.hash(data: data)

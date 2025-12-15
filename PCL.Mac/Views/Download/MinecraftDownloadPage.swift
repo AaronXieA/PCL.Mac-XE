@@ -38,9 +38,9 @@ struct MinecraftDownloadPage: View {
             do {
                 let manifest: VersionManifest = try await refresh()
                 await MainActor.run {
-                    latestRelease = manifest.getVersion(manifest.latestRelease)
+                    latestRelease = manifest.version(for: manifest.latestRelease)
                     if let latestSnapshot = manifest.latestSnapshot {
-                        self.latestSnapshot = manifest.getVersion(latestSnapshot)
+                        self.latestSnapshot = manifest.version(for: latestSnapshot)
                     }
                     categoryMap[.release] = manifest.versions.filter { $0.type == .release }
                     categoryMap[.snapshot] = manifest.versions.filter { $0.type == .snapshot }

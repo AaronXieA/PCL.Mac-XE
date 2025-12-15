@@ -25,7 +25,7 @@ public class DownloadSpeedManager {
         self.lastResetTime = Date().timeIntervalSince1970
     }
     
-    public func currentSpeedBytesPerSecond() -> Double {
+    public func currentSpeed() -> Double {
         let now: TimeInterval = Date().timeIntervalSince1970
         let deltaTime: TimeInterval = now - lastResetTime
         guard deltaTime > 0 else {

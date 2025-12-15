@@ -45,7 +45,7 @@ public enum JavaSearcher {
                     version: javaVersion,
                     versionNumber: parseVersionNumber(javaVersion),
                     type: type,
-                    architecture: .getFileArchitecture(executableURL),
+                    architecture: .architecture(of: executableURL),
                     implementor: implementor,
                     executableURL: executableURL
                 )

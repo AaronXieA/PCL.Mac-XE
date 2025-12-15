@@ -10,7 +10,10 @@ import Foundation
 public enum Architecture: String {
     case arm64, x64, fatFile, unknown
     
-    public static func getFileArchitecture(_ url: URL) -> Architecture {
+    /// 获取文件的架构。
+    /// - Parameter url: 文件的 `URL`。
+    /// - Returns: 文件的架构。如果不是可执行文件或无法识别，返回 `.unknown`。
+    public static func architecture(of url: URL) -> Architecture {
         guard let fh = try? FileHandle(forReadingFrom: url) else { return .unknown }
         defer { try? fh.close() }
         

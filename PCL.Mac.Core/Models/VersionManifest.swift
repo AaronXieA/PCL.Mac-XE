@@ -8,6 +8,7 @@
 import Foundation
 import SwiftyJSON
 
+/// https://zh.minecraft.wiki/w/Version_manifest.json#JSON格式
 public struct VersionManifest {
     public let latestRelease: String
     public let latestSnapshot: String?
@@ -47,12 +48,18 @@ public struct VersionManifest {
         }
     }
     
-    public func getIndex(_ id: String) -> Int {
+    /// 根据版本号获取在 `versions` 中的顺序（版本号越大，返回值越小）。
+    /// - Parameter id: 版本号。
+    /// - Returns: 在 `versions` 中的顺序。
+    public func ordinal(of id: String) -> Int {
         guard let index = versions.firstIndex(where: { $0.id == id }) else { return -1 }
         return versions.count - index
     }
     
-    public func getVersion(_ id: String) -> Version? {
+    /// 获取版本号对应的 `Version` 对象。
+    /// - Parameter id: 版本号。
+    /// - Returns: `Version` 对象。
+    public func version(for id: String) -> Version? {
         return versions.first(where: { $0.id == id })
     }
 }

@@ -8,6 +8,7 @@
 import Foundation
 import SwiftyJSON
 
+/// https://zh.minecraft.wiki/w/客户端清单文件格式
 public class ClientManifest {
     public let gameArguments: [Argument]
     public let jvmArguments: [Argument]
@@ -153,6 +154,8 @@ public class ClientManifest {
             self.hasFeaturesLimit = json["features"].exists()
         }
         
+        /// 判断该 `Rule` 是否通过。
+        /// - Returns: 一个布尔值，表示是否通过。
         public func test() -> Bool {
             if let osName, osName != "osx" { return !allow }
             if let osArch, osArch != .arm64 { return !allow } // TODO
