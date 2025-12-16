@@ -48,12 +48,12 @@ jobs:
         if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
-          name: PCL.Mac-${{ env.SHORT_SHA }}
+          name: PCL.Mac.Refactor-${{ env.SHORT_SHA }}
           path: ./PCL.Mac-artifact
       
       - name: Upload dSYMs artifact
         if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
-          name: PCL.Mac-${{ env.SHORT_SHA }}-dSYMs
+          name: PCL.Mac.Refactor-${{ env.SHORT_SHA }}-dSYMs
           path: ./PCL.Mac-dSYMs
