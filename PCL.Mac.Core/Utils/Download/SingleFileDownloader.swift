@@ -9,17 +9,17 @@ import Foundation
 
 /// 单文件下载器。
 public enum SingleFileDownloader {
+    public static let session: URLSession = .init(configuration: .default, delegate: DownloadDelegate.shared, delegateQueue: DownloadDelegate.queue)
+    
     public static func download(_ item: DownloadItem, replaceMethod: ReplaceMethod, progressHandler: (@MainActor (Double) -> Void)? = nil) async throws {
         try await download(url: item.url, destination: item.destination, sha1: item.sha1, replaceMethod: replaceMethod, progressHandler: progressHandler)
     }
     
-    public static func download(
-        url: URL,
-        destination: URL,
-        sha1: String?,
-        replaceMethod: ReplaceMethod,
-        progressHandler: (@MainActor (Double) -> Void)? = nil
-    ) async throws {
+    public static func download(url: URL,
+                                destination: URL,
+                                sha1: String?,
+                                replaceMethod: ReplaceMethod,
+                                progressHandler: (@MainActor (Double) -> Void)? = nil) async throws {
         // 文件已存在处理
         if FileManager.default.fileExists(atPath: destination.path) {
             if let sha1, try FileUtils.getSHA1(destination) != sha1 {
@@ -40,10 +40,10 @@ public enum SingleFileDownloader {
         
         var request: URLRequest = .init(url: url)
         request.httpMethod = "GET"
-        try await withCheckedThrowingContinuation { continuation in
-            let delegate: DownloadDelegate = .init(destination: destination, continuation: continuation, progressHandler: progressHandler)
-            let session: URLSession = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+        
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             let task: URLSessionDownloadTask = session.downloadTask(with: request)
+            DownloadDelegate.shared.register(task: task, destination: destination, continuation: continuation, progressHandler: progressHandler)
             task.resume()
         }
         
@@ -56,3 +56,4 @@ public enum SingleFileDownloader {
         }
     }
 }
+
