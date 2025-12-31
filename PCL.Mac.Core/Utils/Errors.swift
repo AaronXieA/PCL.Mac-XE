@@ -19,6 +19,7 @@ public enum LaunchError: Error {
     case missingRunningDirectory
     case missingManifest
     case missingAccount
+    case missingRepository
     case invalidMemory
 }
 
@@ -31,6 +32,10 @@ public enum URLError: Error {
 public enum TaskError: Error, Equatable {
     case invalidOrdinal(value: Int)
     case unknownError
+}
+
+public enum MinecraftError: Error {
+    case invalidInstanceFormat
 }
 
 public struct SimpleError: LocalizedError {

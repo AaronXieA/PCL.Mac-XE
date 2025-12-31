@@ -12,12 +12,20 @@ public enum FileUtils {
     /// 获取文件的 SHA-1 校验和。
     /// - Parameter url: 文件的 `URL`。
     /// - Returns: 文件的 SHA-1。
-    public static func getSHA1(_ url: URL) throws -> String {
-        let data: Data = try Data(contentsOf: url)
-        let digest: Insecure.SHA1.Digest = Insecure.SHA1.hash(data: data)
-        let hexString: String = digest.map { byte in
-            String(format: "%02x", byte)
-        }.joined()
-        return hexString
+    public static func sha1(of url: URL) throws -> String {
+        let handle: FileHandle = try .init(forReadingFrom: url)
+        defer { try? handle.close() }
+        
+        var hasher: Insecure.SHA1 = .init()
+        while try autoreleasepool(invoking: {
+            if let data = try handle.read(upToCount: 1024 * 1024), !data.isEmpty {
+                hasher.update(data: data)
+                return true
+            } else {
+                return false
+            }
+        }) { }
+        let digest: Insecure.SHA1.Digest = hasher.finalize()
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 }

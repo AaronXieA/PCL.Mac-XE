@@ -8,29 +8,42 @@
 import SwiftUI
 
 struct TitleBarView: View {
+    @ObservedObject private var router: AppRouter = .shared
+    
     var body: some View {
         ZStack(alignment: .leading) {
             Rectangle()
                 .fill(.blue)
-            HStack {
-                Image("Title")
-                    .resizable()
-                    .scaledToFit()
-                    .foregroundStyle(.white)
-                    .frame(height: 19)
-                    .padding(.leading, 65)
-                Badge("Mac")
-                Badge("Dev", labelColor: .color1, backgroundColor: Color(0x9BF00B))
+            Group {
+                if router.isSubPage {
+                    HStack {
+                        WindowButton("BackButton") {
+                            router.removeLast()
+                        }
+                        MyText(router.title, size: 16, color: .white)
+                    }
+                } else {
+                    HStack {
+                        Image("Title")
+                            .resizable()
+                            .scaledToFit()
+                            .foregroundStyle(.white)
+                            .frame(height: 19)
+                        Badge("Mac")
+                        Badge("Dev", labelColor: .color1, backgroundColor: Color(0x9BF00B))
+                    }
+                    HStack {
+                        Spacer()
+                        PageButton("启动", "LaunchPageIcon", .launch)
+                        PageButton("下载", "DownloadPageIcon", .download)
+                        PageButton("联机", "MultiplayerPageIcon", .multiplayer)
+                        PageButton("设置", "SettingsPageIcon", .settings)
+                        PageButton("更多", "OthersPageIcon", .other)
+                        Spacer()
+                    }
+                }
             }
-            HStack {
-                Spacer()
-                PageButton("启动", "LaunchPageIcon", .launch)
-                PageButton("下载", "DownloadPageIcon", .download)
-                PageButton("联机", "MultiplayerPageIcon", .multiplayer)
-                PageButton("设置", "SettingsPageIcon", .settings)
-                PageButton("更多", "OthersPageIcon", .other)
-                Spacer()
-            }
+            .padding(.leading, 65)
         }
         .frame(height: 48)
     }

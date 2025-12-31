@@ -6,9 +6,12 @@
 //
 
 import SwiftUI
+import Core
 
 struct DownloadSidebar: Sidebar {
-    let width: CGFloat = 120
+    @EnvironmentObject private var minecraftDownloadPageViewModel: MinecraftDownloadPageViewModel
+    
+    let width: CGFloat = 150
     
     var body: some View {
         VStack {
@@ -16,7 +19,13 @@ struct DownloadSidebar: Sidebar {
                 (.minecraftDownload, "LaunchPageIcon", "游戏下载"),
                 (.downloadPage2, "DownloadPageIcon", "Page2"),
                 (.downloadPage3, "MultiplayerPageIcon", "Page3")
-            )
+            ) { router in
+                switch router {
+                case .minecraftDownload:
+                    minecraftDownloadPageViewModel.reload()
+                default: break
+                }
+            }
             Spacer()
         }
     }

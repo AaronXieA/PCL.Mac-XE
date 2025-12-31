@@ -17,14 +17,18 @@ public enum MinecraftInstallTask {
     ///   - name: 实例名。
     ///   - version: Minecraft 版本。
     ///   - minecraftDirectory: 实例所在的 Minecraft 目录。
+    ///   - completion: 任务完成回调，会在主线程执行。
     /// - Returns: 实例安装任务。
-    public static func create(name: String,
-                              version: MinecraftVersion,
-                              minecraftDirectory: URL) -> MyTask<Model> {
+    public static func create(
+        name: String,
+        version: MinecraftVersion,
+        repository: MinecraftRepository,
+        completion: (() -> Void)? = nil
+    ) -> MyTask<Model> {
         let model: Model = .init(
             name: name,
             version: version,
-            minecraftDirectory: minecraftDirectory
+            repository: repository
         )
         return .init(
             name: "\(name) 安装", model: model,
@@ -33,6 +37,12 @@ public enum MinecraftInstallTask {
             .init(2, "下载客户端本体", downloadClient(task:model:)),
             .init(2, "下载散列资源文件", downloadAssets(task:model:)),
             .init(2, "下载依赖库文件", downloadLibraries(task:model:)),
+            .init(3, "__completion", display: false) { _, _ in
+                try repository.load()
+                await MainActor.run {
+                    completion?()
+                }
+            }
         )
     }
     
@@ -58,8 +68,8 @@ public enum MinecraftInstallTask {
     }
     
     private static func downloadAssetIndex(task: SubTask, model: Model) async throws {
-        let destination: URL = model.minecraftDirectory
-            .appending(path: "assets/indexes/\(model.manifest.assetIndex.id).json")
+        let destination: URL = model.repository.assetsURL
+            .appending(path: "indexes/\(model.manifest.assetIndex.id).json")
         try await SingleFileDownloader.download(
             url: model.manifest.assetIndex.url,
             destination: destination,
@@ -81,13 +91,19 @@ public enum MinecraftInstallTask {
     }
     
     private static func downloadAssets(task: SubTask, model: Model) async throws {
-        // TODO
+        let root: URL = URL(string: "https://resources.download.minecraft.net")!
+        let items: [DownloadItem] = model.assetIndex.objects.map { .init(
+            url: root.appending(path: "\($0.hash.prefix(2))/\($0.hash)"),
+            destination: model.repository.assetsURL.appending(path: "objects/\($0.hash.prefix(2))/\($0.hash)"),
+            sha1: $0.hash
+        ) }
+        try await MultiFileDownloader(items: items, concurrentLimit: 64, replaceMethod: .skip, progressHandler: task.setProgress(_:)).start()
     }
     
     private static func downloadLibraries(task: SubTask, model: Model) async throws {
         let items: [DownloadItem] = (model.manifest.getLibraries() + model.manifest.getNatives())
             .compactMap(\.artifact)
-            .map { DownloadItem(url: $0.url, destination: model.minecraftDirectory.appending(path: "libraries/\($0.path)"), sha1: $0.sha1) }
+            .map { DownloadItem(url: $0.url, destination: model.repository.librariesURL.appending(path: $0.path), sha1: $0.sha1) }
         try await MultiFileDownloader(items: items, concurrentLimit: 64, replaceMethod: .skip, progressHandler: task.setProgress(_:)).start()
     }
     
@@ -95,16 +111,16 @@ public enum MinecraftInstallTask {
         public let name: String
         public let version: MinecraftVersion
         public let runningDirectory: URL
-        public let minecraftDirectory: URL
+        public let repository: MinecraftRepository
         
         public var manifest: ClientManifest!
         public var assetIndex: AssetIndex!
         
-        public init(name: String, version: MinecraftVersion, minecraftDirectory: URL) {
+        public init(name: String, version: MinecraftVersion, repository: MinecraftRepository) {
             self.name = name
             self.version = version
-            self.runningDirectory = minecraftDirectory.appending(path: "versions/\(name)")
-            self.minecraftDirectory = minecraftDirectory
+            self.runningDirectory = repository.versionsURL.appending(path: name)
+            self.repository = repository
         }
     }
 }

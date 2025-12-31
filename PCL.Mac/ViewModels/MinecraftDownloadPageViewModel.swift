@@ -33,6 +33,17 @@ class MinecraftDownloadPageViewModel: ObservableObject {
         return manifest
     }
     
+    public func reload() {
+        Task {
+            do {
+                try await load(noCache: true)
+                log("Minecraft 版本列表刷新成功")
+            } catch {
+                err("Minecraft 版本列表刷新失败：\(error.localizedDescription)")
+            }
+        }
+    }
+    
     public func destroy() {
         loaded = false
         latestRelease = nil
