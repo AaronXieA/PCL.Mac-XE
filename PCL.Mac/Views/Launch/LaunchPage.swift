@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct LaunchPage: View {
-    @State private var text: String = ""
+    private let loadingModel: MyLoadingViewModel = .init(text: "加载中")
     private let texts: [(String, String)] = [
         ("AAAAAA", "aaaaaa"), ("BBBBBB", "bbbbbb"), ("CCCCCC", "cccccc")
     ]
@@ -33,7 +33,7 @@ struct LaunchPage: View {
                     VStack(spacing: 0) {
                         ForEach(texts, id: \.0) { text in
                             MyListItem {
-                                VStack {
+                                VStack(alignment: .leading) {
                                     MyText(text.0)
                                     MyText(text.1)
                                 }
@@ -45,15 +45,33 @@ struct LaunchPage: View {
             MyCard("不可折叠的卡片", foldable: false) {
                 MyText("该卡片默认展开")
             }
+            .cardIndex(1)
+            
             MyCard("", titled: false) {
                 MyText("不可折叠也没有标题的卡片")
             }
+            .cardIndex(2)
+            
             MyCard("", titled: false) {
                 MyButton(".tasks") {
                     AppRouter.shared.append(.tasks)
                 }
                 .frame(width: 80, height: 40)
             }
+            .cardIndex(3)
+            
+            MyLoading(viewModel: loadingModel)
+                .cardIndex(4)
+            
+            MyCard("修改 MyLoading 状态", foldable: false) {
+                HStack(spacing: 22) {
+                    MyButton("fail()", type: .red) { loadingModel.fail(with: "加载失败") }
+                        .frame(width: 120)
+                    Spacer()
+                }
+                .frame(height: 32)
+            }
+            .cardIndex(5)
         }
     }
 }

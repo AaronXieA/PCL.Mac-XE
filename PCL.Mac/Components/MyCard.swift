@@ -8,6 +8,11 @@
 import SwiftUI
 
 struct MyCard<Content: View>: View {
+    @Environment(\.cardIndex) private var index: Int?
+    /// 带动画
+    @State private var appeared: Bool = false
+    /// 无动画，在 `appeared` 动画结束后变更
+    @State private var appearFinished: Bool = false
     @State private var folded: Bool = true
     @State private var hovered: Bool = false
     @State private var showContent: Bool = false
@@ -44,7 +49,7 @@ struct MyCard<Content: View>: View {
                     }
                 }
             }
-            .foregroundStyle(hovered ? Color.color2 : .color1)
+            .foregroundStyle(appearFinished && hovered ? Color.color2 : .color1)
             .frame(height: titled ? 12 : 0)
             .frame(maxWidth: .infinity)
             .padding(12)
@@ -100,14 +105,40 @@ struct MyCard<Content: View>: View {
                 .fill(Color.colorGray8)
                 .shadow(color: hovered ? .color3.opacity(0.6) : .black.opacity(0.1), radius: 6)
         }
+        .offset(y: appeared ? 0 : -25)
+        .opacity(appeared ? 1 : 0)
         .animation(.easeInOut(duration: 0.2), value: hovered)
+        .animation(.spring(response: 0.4, dampingFraction: 0.5), value: appeared)
         .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index ?? 0) * 0.04) {
+                appeared = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index ?? 0) * 0.04 + 0.4) {
+                appearFinished = true
+            }
             if !foldable || !titled {
                 folded = false
                 showContent = true
                 internalContentHeight = contentHeight
             }
         }
+    }
+}
+
+private struct CardIndexKey: EnvironmentKey {
+    static let defaultValue: Int? = nil
+}
+
+extension EnvironmentValues {
+    var cardIndex: Int? {
+        get { self[CardIndexKey.self] }
+        set { self[CardIndexKey.self] = newValue }
+    }
+}
+
+extension View {
+    func cardIndex(_ index: Int) -> some View {
+        environment(\.cardIndex, index)
     }
 }
 
