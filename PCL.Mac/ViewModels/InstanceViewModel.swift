@@ -18,9 +18,22 @@ class InstanceViewModel: ObservableObject {
         self.repositories = LauncherConfig.shared.minecraftRepositories
         if let currentRepository: Int = LauncherConfig.shared.currentRepository {
             self.currentRepository = LauncherConfig.shared.minecraftRepositories[currentRepository]
+            do {
+                try self.currentRepository!.load()
+            } catch {
+                err("加载游戏仓库失败：\(error.localizedDescription)")
+            }
         }
         if let currentInstance: String = LauncherConfig.shared.currentInstance {
-            self.currentInstance = try? currentRepository?.instance(id: currentInstance)
+            if let currentInstance = try? currentRepository?.instance(id: currentInstance) {
+                self.currentInstance = currentInstance
+            } else if let currentInstance = currentRepository?.instances?.first {
+                log("配置文件中的当前实例失效，切换到当前第一个可用的实例")
+                self.currentInstance = currentInstance
+                LauncherConfig.shared.currentInstance = currentInstance.name
+            } else {
+                warn("配置文件中的当前实例失效，且当前没有可用实例")
+            }
         }
     }
     
@@ -28,26 +41,13 @@ class InstanceViewModel: ObservableObject {
     /// - Parameters:
     ///   - instance: 目标实例。
     ///   - repository: 目标实例所在的仓库。
-    public func switchInstance(to instance: MinecraftRepository.Instance, _ repository: MinecraftRepository) {
-        switchInstance(id: instance.id, version: instance.version, repository)
-    }
-    
-    /// 切换当前实例。
-    /// - Parameters:
-    ///   - id: 目标实例的 ID。
-    ///   - version: （可选）该实例的版本。
-    ///   - repository: 目标实例所在的仓库。
-    public func switchInstance(id: String, version: MinecraftVersion? = nil, _ repository: MinecraftRepository) {
+    public func switchInstance(to instance: MinecraftInstance, _ repository: MinecraftRepository) {
         guard repositories.contains(repository) else {
             err("试图切换到 \(repository.url) 仓库，但 repositories 中不存在它")
             return
         }
-        do {
-            self.currentInstance = try repository.instance(id: id, version: version)
-        } catch {
-            err("加载实例失败：\(error.localizedDescription)")
-        }
-        LauncherConfig.shared.currentInstance = id
+        self.currentInstance = instance
+        LauncherConfig.shared.currentInstance = instance.name
         if currentRepository != repository {
             switchRepository(to: repository, alsoSwitchInstance: false)
         }
@@ -94,6 +94,25 @@ class InstanceViewModel: ObservableObject {
                 throw SimpleError("该目录已存在！")
             }
             addRepository(url: url)
+        }
+    }
+    
+    /// 启动游戏。
+    /// - Parameters:
+    ///   - instance: 目标游戏实例。
+    ///   - repository: 游戏仓库。
+    public func launch(_ instance: MinecraftInstance, in repository: MinecraftRepository) {
+        log("正在启动游戏 \(instance.name)")
+        Task.detached {
+            var options: LaunchOptions = .init()
+            options.runningDirectory = instance.runningDirectory
+            options.javaURL = URL(fileURLWithPath: "/usr/bin/java")
+            options.manifest = instance.manifest
+            options.repository = repository
+            options.memory = 4096
+            try options.validate()
+            let launcher: MinecraftLauncher = .init(options: options)
+            let _ = try launcher.launch()
         }
     }
 }

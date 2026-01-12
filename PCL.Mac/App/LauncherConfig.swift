@@ -10,7 +10,7 @@ import Core
 
 public class LauncherConfig: Codable {
     public static let shared: LauncherConfig = {
-        let url: URL = AppURLs.configURL
+        let url: URL = URLConstants.configURL
         if !FileManager.default.fileExists(atPath: url.path) {
             let config: LauncherConfig = .init()
             log("配置文件不存在，正在创建")
@@ -48,25 +48,10 @@ public class LauncherConfig: Codable {
             self.currentRepository = minecraftRepositories.isEmpty ? nil : 0
         }
         
-        loadInstance: if let currentRepository = self.currentRepository {
-            let repository: MinecraftRepository = self.minecraftRepositories[currentRepository]
-            guard let instances = repository.instances else { break loadInstance }
-            if let currentInstance = try container.decodeIfPresent(String.self, forKey: .currentInstance) { // 尝试从 JSON 中加载当前实例，若合法会直接跳出整个代码块
-                if instances.contains(where: { $0.id == currentInstance }) {
-                    self.currentInstance = currentInstance
-                    break loadInstance
-                } else {
-                    warn("currentRepository 中不存在 \(currentInstance)")
-                }
-            }
-            // fallback
-            if !instances.isEmpty {
-                self.currentInstance = instances.first?.id
-            }
-        }
+        self.currentInstance = try container.decodeIfPresent(String.self, forKey: .currentInstance)
     }
     
-    public static func save(_ config: LauncherConfig = .shared, to url: URL = AppURLs.configURL) throws {
+    public static func save(_ config: LauncherConfig = .shared, to url: URL = URLConstants.configURL) throws {
         let data: Data = try JSONEncoder.shared.encode(config)
         try data.write(to: url)
     }
