@@ -69,9 +69,23 @@ struct LaunchPage: View {
                         .frame(width: 120)
                     Spacer()
                 }
-                .frame(height: 32)
+                .frame(height: 36)
             }
             .cardIndex(5)
+            
+            MyCard("弹出 hint", foldable: false) {
+                HStack(spacing: 22) {
+                    MyButton("info") { hint("这是一条 info 类型的 hint！", type: .info) }
+                        .frame(width: 120)
+                    MyButton("finish", type: .highlight) { hint("这是一条 finish 类型的 hint！", type: .finish) }
+                        .frame(width: 120)
+                    MyButton("critical", type: .red) { hint("这是一条 critical 类型的 hint！", type: .critical) }
+                        .frame(width: 120)
+                    Spacer()
+                }
+                .frame(height: 36)
+            }
+            .cardIndex(6)
         }
     }
 }

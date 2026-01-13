@@ -26,8 +26,8 @@ class AppWindow: NSWindow {
         self.contentView = NSHostingView(
             rootView: ContentView()
                 .ignoresSafeArea(.container, edges: .top)
-                .environmentObject(MinecraftDownloadPageViewModel())
                 .environmentObject(InstanceViewModel())
+                .environmentObject(MinecraftDownloadPageViewModel())
                 .environmentObject(InstanceListViewModel())
         )
         
