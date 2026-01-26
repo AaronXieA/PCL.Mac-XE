@@ -31,6 +31,7 @@ struct ContentView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay { MessageBoxOverlay() }
         .overlay {
             VStack(alignment: .leading, spacing: 16) {
                 Spacer()
@@ -60,7 +61,7 @@ private struct HintView: View {
                 .frame(height: 22)
             MyText(model.text, color: .white)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 4)
+                .padding(.horizontal, 4)
         }
         .opacity(appeared ? 1 : 0)
         .offset(x: appeared ? 0 : -50)
@@ -78,25 +79,60 @@ private struct HintView: View {
         case .critical: Color(0xFF2B00)
         }
     }
+}
+
+private struct MessageBoxOverlay: View {
+    @ObservedObject var messageBoxManager: MessageBoxManager = .shared
+    @State private var messageBox: MessageBoxModel?
     
-    private struct RightRoundedRectangle: Shape {
-        let cornerRadius: CGFloat
-        
-        func path(in rect: CGRect) -> Path {
-            let r: CGFloat = min(cornerRadius, rect.height / 2)
-            var path: Path = .init()
-            path.move(to: CGPoint(x: rect.minX, y: rect.minY))
-            path.addLine(to: CGPoint(x: rect.maxX - r, y: rect.minY))
-            path.addArc(center: CGPoint(x: rect.maxX - r, y: rect.minY + r),
-                        radius: r,
-                        startAngle: .degrees(-90), endAngle: .degrees(0), clockwise: false)
-            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - r))
-            path.addArc(center: CGPoint(x: rect.maxX - r, y: rect.maxY - r),
-                        radius: r,
-                        startAngle: .degrees(0), endAngle: .degrees(90), clockwise: false)
-            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
-            path.closeSubpath()
-            return path
+    @State private var opacity: CGFloat = 0
+    @State private var rotation: CGFloat = 4
+    @State private var offsetY: CGFloat = 40
+    
+    @State private var animationHideWorkItem: DispatchWorkItem?
+    
+    var body: some View {
+        Group {
+            if let messageBox {
+                ZStack {
+                    Rectangle()
+                        .fill(messageBox.level == .error ? Color(0xFF0000).opacity(0.5) : .black.opacity(0.35))
+                    MessageBoxView(model: messageBox)
+                        .shadow(color: .color1.opacity(0.8), radius: 20)
+                        .rotationEffect(.degrees(rotation))
+                        .offset(y: offsetY)
+                }
+                .opacity(opacity)
+            }
+        }
+        .onChange(of: messageBoxManager.currentMessageBox) { newValue in
+            if newValue != nil { // 移入
+                animationHideWorkItem?.cancel()
+                messageBox = newValue
+                withAnimation(.spring(duration: 0.3, bounce: 0.3)) {
+                    offsetY = 0
+                }
+                withAnimation(.easeOut(duration: 0.3)) {
+                    opacity = 1
+                    rotation = 0
+                }
+            } else { // 移出
+                let workItem: DispatchWorkItem = .init {
+                    self.messageBox = nil
+                    self.rotation = 4
+                    self.offsetY = 40
+                }
+                animationHideWorkItem = workItem
+                let duration: CGFloat = 0.15
+                DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: workItem)
+                withAnimation(.easeOut(duration: duration)) {
+                    opacity = 0
+                    offsetY = 60
+                }
+                withAnimation(.easeIn(duration: duration)) {
+                    rotation = 6
+                }
+            }
         }
     }
 }
