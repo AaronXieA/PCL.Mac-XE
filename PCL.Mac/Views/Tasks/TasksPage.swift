@@ -29,7 +29,6 @@ struct TasksPage: View {
                         taskManager.execute(task: task)
                     }
                     .frame(width: 100)
-                    Spacer()
                 }
                 .frame(height: 40)
             }

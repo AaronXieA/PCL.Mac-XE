@@ -8,24 +8,29 @@
 import Foundation
 import AppKit
 import Core
+import SwiftScaffolding
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var window: AppWindow!
     
-    private func executeTask(_ name: String, _ start: @escaping () throws -> Void) {
+    private func executeTask(_ name: String, silent: Bool = false, _ start: @escaping () throws -> Void) {
         do {
             try start()
-            log("\(name)成功")
+            if !silent {
+                log("\(name)成功")
+            }
         } catch {
             err("\(name)失败：\(error.localizedDescription)")
         }
     }
     
-    private func executeAsyncTask(_ name: String, _ start: @escaping () async throws -> Void) {
+    private func executeAsyncTask(_ name: String, silent: Bool = false, _ start: @escaping () async throws -> Void) {
         Task {
             do {
                 try await start()
-                log("\(name)成功")
+                if !silent {
+                    log("\(name)成功")
+                }
             } catch {
                 err("\(name)失败：\(error.localizedDescription)")
             }
@@ -36,6 +41,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         URLConstants.createDirectories()
         LogManager.shared.enableLogging()
         log("正在启动 PCL.Mac.Refactor \(Metadata.appVersion)")
+        executeTask("开启 SwiftScaffolding 日志", silent: true) {
+            try SwiftScaffolding.Logger.enableLogging(url: URLConstants.logsDirectoryURL.appending(path: "swift-scaffolding.log"))
+        }
         _ = LauncherConfig.shared
         executeTask("加载版本缓存") {
             try VersionCache.load()
@@ -81,5 +89,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         executeTask("保存启动器配置") {
             try LauncherConfig.save()
         }
+        EasyTierManager.shared.easyTier.terminate()
     }
 }

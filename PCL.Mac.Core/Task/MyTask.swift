@@ -31,12 +31,7 @@ public class MyTask<Model: TaskModel>: ObservableObject, Identifiable {
     private let model: Model
     private var cancellables: [AnyCancellable] = []
     
-    /// 创建一个任务。
-    /// - Parameters:
-    ///   - name: 任务名。
-    ///   - model: 任务模型，用于在子任务间共享数据。
-    ///   - subTasks: 该任务的子任务列表。
-    public init(name: String, model: Model, _ subTasks: SubTask...) {
+    private init(name: String, model: Model, _ subTasks: [SubTask]) {
         self.name = name
         self.model = model
         self.subTasks = subTasks
@@ -45,6 +40,15 @@ public class MyTask<Model: TaskModel>: ObservableObject, Identifiable {
                 self?.objectWillChange.send()
             }
         }
+    }
+    
+    /// 创建一个任务。
+    /// - Parameters:
+    ///   - name: 任务名。
+    ///   - model: 任务模型，用于在子任务间共享数据。
+    ///   - subTasks: 该任务的子任务列表。
+    public convenience init(name: String, model: Model, _ subTasks: SubTask...) {
+        self.init(name: name, model: model, subTasks)
     }
     
     /// 开始按顺序执行任务。
@@ -134,6 +138,16 @@ public class MyTask<Model: TaskModel>: ObservableObject, Identifiable {
                 self.state = state
             }
         }
+    }
+}
+
+extension MyTask where Model == EmptyModel {
+    /// 当任务不需要共享模型数据时的便捷构造函数。
+    /// - Parameters:
+    ///   - name: 任务名。
+    ///   - subTasks: 子任务列表。
+    public convenience init(name: String, _ subTasks: SubTask...) {
+        self.init(name: name, model: EmptyModel(), subTasks)
     }
 }
 
