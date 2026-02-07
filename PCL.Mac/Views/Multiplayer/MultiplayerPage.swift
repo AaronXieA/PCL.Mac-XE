@@ -31,6 +31,11 @@ struct MultiplayerPage: View {
         }
         .onAppear {
             isEasyTierInstalled = EasyTierManager.shared.isInstalled()
+            if viewModel.state == .creatingRoom {
+                loadingViewModel.text = "创建房间中"
+            } else if viewModel.state == .joiningRoom {
+                loadingViewModel.text = "加入房间中"
+            }
         }
         .onChange(of: viewModel.state) { newValue in
             if newValue == .creatingRoom {
@@ -43,7 +48,7 @@ struct MultiplayerPage: View {
     
     private var installEasyTierBody: some View {
         MyCard("安装 EasyTier", foldable: false) {
-            MyListItem(.init(image: .init(named: "DownloadPageIcon"), imageSize: 28, name: "安装 EasyTier", description: "联机功能使用 EasyTier 实现，所以你需要先安装 EasyTier 才能进行联机！"))
+            MyListItem(.init(image: "DownloadPageIcon", imageSize: 28, name: "安装 EasyTier", description: "联机功能使用 EasyTier 实现，所以你需要先安装 EasyTier 才能进行联机！"))
                 .onTapGesture {
                     Task {
                         try await checkDisclaimer()
@@ -60,7 +65,7 @@ struct MultiplayerPage: View {
     private var readyBody: some View {
         MyCard("开始联机", foldable: false) {
             VStack(spacing: 0) {
-                MyListItem(.init(image: .init(named: "MultiplayerPageIcon"), imageSize: 28, name: "创建房间", description: "使用局域网世界创建房间，并邀请好友加入！"))
+                MyListItem(.init(image: "MultiplayerPageIcon", imageSize: 28, name: "创建房间", description: "使用局域网世界创建房间，并邀请好友加入！"))
                     .onTapGesture {
                         Task {
                             if await EasyTierManager.shared.hintInstall() {
@@ -83,7 +88,7 @@ struct MultiplayerPage: View {
                             viewModel.startHost(serverPort: port)
                         }
                     }
-                MyListItem(.init(image: .init(named: "IconAdd"), imageSize: 28, name: "加入房间", description: "通过房主分享的房间码，加入游戏世界！"))
+                MyListItem(.init(image: "IconAdd", imageSize: 28, name: "加入房间", description: "通过房主分享的房间码，加入游戏世界！"))
                     .onTapGesture {
                         Task {
                             if await EasyTierManager.shared.hintInstall() {
@@ -109,6 +114,10 @@ struct MultiplayerPage: View {
                                 }
                             }
                         }
+                    }
+                MyListItem(.init(image: "IconAbout", imageSize: 28, name: "帮助文档", description: "点击这里可以查看联机教程！"))
+                    .onTapGesture {
+                        NSWorkspace.shared.open(URL(string: "https://ceciliastudio.top/helps/PCL.Mac#联机")!)
                     }
             }
         }
@@ -178,6 +187,14 @@ struct MultiplayerPage: View {
     }
     
     private func checkDisclaimer() async throws {
+        if await LocaleUtils.isInChinaMainland(strict: false) == false {
+            _ = await MessageBoxManager.shared.showText(
+                title: "不支持的地区",
+                content: "PCL.Mac 目前只支持中国大陆地区。\n如果您在中国大陆，并使用了 VPN 等工具，请先关闭它们，然后再次尝试！",
+                level: .error
+            )
+            throw SimpleError("不支持的地区")
+        }
         if LauncherConfig.shared.multiplayerDisclaimerAgreed { return }
         if await MessageBoxManager.shared.showText(
             title: "免责声明",

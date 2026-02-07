@@ -38,7 +38,7 @@ class MultiplayerViewModel: ObservableObject {
             }
             state = .creatingRoom
             let code: String = RoomCode.generate()
-            let playerName: String = AccountViewModel().currentAccount?.profile.name ?? "Steve"
+            let playerName: String = AccountViewModel().currentAccount?.profile.name ?? "Anonymous"
             let server: ScaffoldingServer = .init(
                 easyTier: EasyTierManager.shared.easyTier,
                 roomCode: code,
@@ -108,7 +108,7 @@ class MultiplayerViewModel: ObservableObject {
     ///   - playerName: 房客玩家名。
     @MainActor
     public func join(roomCode: String) {
-        let playerName: String = AccountViewModel().currentAccount?.profile.name ?? "Steve"
+        let playerName: String = AccountViewModel().currentAccount?.profile.name ?? "Anonymous"
         let client: ScaffoldingClient = .init(
             easyTier: EasyTierManager.shared.easyTier,
             playerName: playerName,
@@ -188,7 +188,7 @@ class MultiplayerViewModel: ObservableObject {
         guard state == .hostReady || state == .memberReady else {
             return
         }
-        if [128 + SIGTERM, 128 + SIGKILL].contains(process.terminationStatus) {
+        if [9, 15, 128 + 9, 128 + 15].contains(Int(process.terminationStatus)) {
             log("用户手动退出了 EasyTier 进程")
             showError(title: "错误", body: "无法继续联机：EasyTier 进程被杀死。")
         } else {
