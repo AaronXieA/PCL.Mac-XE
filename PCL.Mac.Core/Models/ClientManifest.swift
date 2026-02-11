@@ -21,27 +21,78 @@ public class ClientManifest: Decodable {
     public let mainClass: String
     public let type: String
     
+    public let inheritsFrom: String?
+    
     private enum CodingKeys: String, CodingKey {
         case arguments, assetIndex, downloads, id, javaVersion, libraries, logging, mainClass, type
+        case minecraftArguments
+        case inheritsFrom
     }
     
     private enum ArgumentsCodingKeys: String, CodingKey {
         case game, jvm
     }
     
+    public init(
+        gameArguments: [Argument],
+        jvmArguments: [Argument],
+        assetIndex: AssetIndex,
+        downloads: Downloads,
+        id: String,
+        javaVersion: JavaVersion,
+        libraries: [Library],
+        logging: Logging,
+        mainClass: String,
+        type: String,
+        inheritsFrom: String?
+    ) {
+        self.gameArguments = gameArguments
+        self.jvmArguments = jvmArguments
+        self.assetIndex = assetIndex
+        self.downloads = downloads
+        self.id = id
+        self.javaVersion = javaVersion
+        self.libraries = libraries
+        self.logging = logging
+        self.mainClass = mainClass
+        self.type = type
+        self.inheritsFrom = inheritsFrom
+    }
+    
     public required init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let argumentsContainer = try container.nestedContainer(keyedBy: ArgumentsCodingKeys.self, forKey: .arguments)
-        self.gameArguments = try argumentsContainer.decode([Argument].self, forKey: .game)
-        self.jvmArguments = try argumentsContainer.decode([Argument].self, forKey: .jvm)
+        if container.contains(.minecraftArguments) { // 1.12-
+            self.gameArguments = try container.decode(String.self, forKey: .minecraftArguments).split(separator: " ").map { .init(value: [String($0)], rules: []) }
+            self.jvmArguments = [
+                "-XX:+UnlockExperimentalVMOptions", "-XX:+UseG1GC", "-XX:-UseAdaptiveSizePolicy", "-XX:-OmitStackTraceInFastThrow",
+                "-Djava.library.path=${natives_directory}",
+                "-Dorg.lwjgl.system.SharedLibraryExtractPath=${natives_directory}",
+                "-Dio.netty.native.workdir=${natives_directory}",
+                "-Djna.tmpdir=${natives_directory}",
+                "-cp", "${classpath}"
+            ].map { .init(value: [$0], rules: []) }
+        } else {
+            let argumentsContainer = try container.nestedContainer(keyedBy: ArgumentsCodingKeys.self, forKey: .arguments)
+            self.gameArguments = try argumentsContainer.decode([Argument].self, forKey: .game)
+            self.jvmArguments = try argumentsContainer.decode([Argument].self, forKey: .jvm)
+        }
         self.assetIndex = try container.decode(AssetIndex.self, forKey: .assetIndex)
         self.downloads = try container.decode(Downloads.self, forKey: .downloads)
         self.id = try container.decode(String.self, forKey: .id)
-        self.javaVersion = try container.decode(JavaVersion.self, forKey: .javaVersion)
+        self.javaVersion = try container.decodeIfPresent(JavaVersion.self, forKey: .javaVersion) ?? .init(component: "jre-legacy", majorVersion: 8)
         self.libraries = try container.decode([Library].self, forKey: .libraries)
-        self.logging = try container.decode(Logging.self, forKey: .logging)
+        self.logging = try container.decodeIfPresent(Logging.self, forKey: .logging) ?? .init(
+            argument: "-Dlog4j.configurationFile=${path}",
+            file: .init(
+                id: "client-1.12.xml",
+                url: URL(string: "https://piston-data.mojang.com/v1/objects/bd65e7d2e3c237be76cfbef4c2405033d7f91521/client-1.12.xml")!,
+                size: 888,
+                sha1: "bd65e7d2e3c237be76cfbef4c2405033d7f91521"
+            )
+        )
         self.mainClass = try container.decode(String.self, forKey: .mainClass)
         self.type = try container.decode(String.self, forKey: .type)
+        self.inheritsFrom = try container.decodeIfPresent(String.self, forKey: .inheritsFrom)
     }
     
     public class Argument: Decodable {
@@ -66,6 +117,11 @@ public class ClientManifest: Decodable {
                 }
                 self.rules = try container.decode([ArgumentRule].self, forKey: .rules)
             }
+        }
+        
+        public init(value: [String], rules: [ArgumentRule]) {
+            self.value = value
+            self.rules = rules
         }
     }
     
@@ -94,7 +150,7 @@ public class ClientManifest: Decodable {
     public class Downloads: Decodable {
         public let client: Download
         public let clientMappings: Download?
-        public let server: Download
+        public let server: Download?
         public let serverMappings: Download?
         
         private enum CodingKeys: String, CodingKey {
@@ -133,13 +189,20 @@ public class ClientManifest: Decodable {
         }()
         public lazy var isRulesSatisfied: Bool = { rules.allSatisfy { $0.test() } }()
         
+        public init(name: String, artifact: Artifact?, rules: [Rule], isNativeLibrary: Bool) {
+            self.name = name
+            self.artifact = artifact
+            self.rules = rules
+            self.isNativesLibrary = isNativeLibrary
+        }
+        
         public required init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             self.name = try container.decode(String.self, forKey: .name)
             self.isNativesLibrary = container.contains(.natives)
             let downloadsContainer = try? container.nestedContainer(keyedBy: DownloadsCodingKeys.self, forKey: .downloads)
             if !isNativesLibrary {
-                self.artifact = try downloadsContainer.unwrap().decode(Artifact.self, forKey: .artifact)
+                self.artifact = try downloadsContainer.unwrap("该支持库没有 artifact。").decode(Artifact.self, forKey: .artifact)
             } else {
                 let natives: [String: String] = try container.decode([String: String].self, forKey: .natives)
                 if let key = natives["osx"] {
@@ -159,6 +222,11 @@ public class ClientManifest: Decodable {
         
         private enum CodingKeys: String, CodingKey { case client }
         private enum ClientCodingKeys: String, CodingKey { case argument, file }
+        
+        public init(argument: String, file: File) {
+            self.argument = argument
+            self.file = file
+        }
         
         public required init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self).nestedContainer(keyedBy: ClientCodingKeys.self, forKey: .client)
@@ -217,9 +285,10 @@ public class ClientManifest: Decodable {
         /// - Parameter options: 生成参数时使用的 `LaunchOptions`。
         /// - Returns: 一个布尔值，表示是否通过。
         public func test(with options: LaunchOptions) -> Bool {
+            guard super.test() else { return false }
             for (name, value) in features {
                 if name == "is_demo_user" && value != options.demo {
-                    return false
+                    return !allow
                 }
                 if [
                     "has_custom_resolution",
@@ -228,16 +297,21 @@ public class ClientManifest: Decodable {
                     "is_quick_play_multiplayer",
                     "is_quick_play_realms"
                 ].contains(name) && value { // not implemented
-                    return false
+                    return !allow
                 }
             }
-            return true
+            return allow
         }
     }
     
     public class JavaVersion: Decodable {
         public let component: String
         public let majorVersion: Int
+        
+        public init(component: String, majorVersion: Int) {
+            self.component = component
+            self.majorVersion = majorVersion
+        }
     }
     
     /// 获取所有可用的普通依赖库。
@@ -250,5 +324,10 @@ public class ClientManifest: Decodable {
     /// - Returns: 所有可用的本地库。
     public func getNatives() -> [Library] {
         return libraries.filter { $0.isNativesLibrary && $0.isRulesSatisfied }
+    }
+    
+    /// 创建一个新清单，继承本清单的所有属性，并使用指定的 libraries。
+    public func setLibraries(to libraries: [Library]) -> ClientManifest {
+        return .init(gameArguments: gameArguments, jvmArguments: jvmArguments, assetIndex: assetIndex, downloads: downloads, id: id, javaVersion: javaVersion, libraries: libraries, logging: logging, mainClass: mainClass, type: type, inheritsFrom: inheritsFrom)
     }
 }

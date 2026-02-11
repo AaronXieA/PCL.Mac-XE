@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftyJSON
+import ZIPFoundation
 
 /// Minecraft 安装任务生成器。
 public enum MinecraftInstallTask {
@@ -44,10 +45,11 @@ public enum MinecraftInstallTask {
                     progressHandler: task.setProgress(_:)
                 )
                 model.manifest = manifest
+                model.mappedManifest = NativesMapper.map(manifest)
             },
             .init(1, "下载资源索引文件") { task, model in
                 let assetIndex: AssetIndex = try await downloadAssetIndex(
-                    assetIndex: model.manifest.assetIndex,
+                    assetIndex: model.mappedManifest.assetIndex,
                     repository: model.repository,
                     progressHandler: task.setProgress(_:)
                 )
@@ -55,7 +57,7 @@ public enum MinecraftInstallTask {
             },
             .init(2, "下载客户端本体") { task, model in
                 try await downloadClient(
-                    clientDownload: model.manifest.downloads.client,
+                    clientDownload: model.mappedManifest.downloads.client,
                     runningDirectory: model.runningDirectory,
                     progressHandler: task.setProgress(_:)
                 )
@@ -69,12 +71,20 @@ public enum MinecraftInstallTask {
             },
             .init(2, "下载依赖库文件") { task, model in
                 try await downloadLibraries(
-                    manifest: model.manifest,
+                    manifest: model.mappedManifest,
                     repository: model.repository,
                     progressHandler: task.setProgress(_:)
                 )
             },
-            .init(3, "__completion", display: false) { _, _ in
+            .init(3, "解压本地库文件", display: version < .init("1.19.1")) { task, model in
+                try await extractNatives(
+                    manifest: model.mappedManifest,
+                    runningDirectory: model.runningDirectory,
+                    repository: model.repository,
+                    progressHandler: task.setProgress(_:)
+                )
+            },
+            .init(4, "__completion", display: false) { _, _ in
                 let instance: MinecraftInstance = .init(
                     runningDirectory: repository.versionsURL.appending(path: name),
                     version: version,
@@ -94,23 +104,24 @@ public enum MinecraftInstallTask {
     ///   - repository: 实例所在的 `MinecraftRepository`。
     ///   - progressHandler: 进度回调。
     public static func completeResources(
-        instance: MinecraftInstance,
+        runningDirectory: URL,
+        manifest: ClientManifest,
         repository: MinecraftRepository,
         progressHandler: @MainActor @escaping (Double) -> Void
     ) async throws {
-        var progress: [Double] = Array(repeating: 0, count: 4) {
+        var progress: [Double] = Array(repeating: 0, count: 5) {
             didSet {
-                progressHandler(progress[0] * 0.15 + progress[1] * 0.05 + progress[2] * 0.5 + progress[3] * 0.3)
+                progressHandler(progress[0] * 0.15 + progress[1] * 0.05 + progress[2] * 0.5 + progress[3] * 0.25 + progress[4] * 0.05)
             }
         }
         
         try await downloadClient(
-            clientDownload: instance.manifest.downloads.client,
-            runningDirectory: instance.runningDirectory,
+            clientDownload: manifest.downloads.client,
+            runningDirectory: runningDirectory,
             progressHandler: { progress[0] = $0 }
         )
         let assetIndex: AssetIndex = try await downloadAssetIndex(
-            assetIndex: instance.manifest.assetIndex,
+            assetIndex: manifest.assetIndex,
             repository: repository,
             progressHandler: { progress[1] = $0 }
         )
@@ -120,9 +131,15 @@ public enum MinecraftInstallTask {
             progressHandler: { progress[2] = $0 }
         )
         try await downloadLibraries(
-            manifest: instance.manifest,
+            manifest: manifest,
             repository: repository,
             progressHandler: { progress[3] = $0 }
+        )
+        try await extractNatives(
+            manifest: manifest,
+            runningDirectory: runningDirectory,
+            repository: repository,
+            progressHandler: { progress[4] = $0 }
         )
     }
     
@@ -206,6 +223,43 @@ public enum MinecraftInstallTask {
         try await MultiFileDownloader(items: items, concurrentLimit: 64, replaceMethod: .skip, progressHandler: progressHandler).start()
     }
     
+    private static func extractNatives(
+        manifest: ClientManifest,
+        runningDirectory: URL,
+        repository: MinecraftRepository,
+        progressHandler: @MainActor @escaping (Double) -> Void
+    ) async throws {
+        let natives: [ClientManifest.Library] = manifest.getNatives()
+        for native in natives {
+            guard let path: String = native.artifact?.path else {
+                err("本地库 \(native.name) 通过了 rules 检查，但 classifiers 中没有其对应的 artifact")
+                continue
+            }
+            let url: URL = repository.librariesURL.appending(path: path)
+            guard FileManager.default.fileExists(atPath: url.path) else {
+                err("本地库 \(native.name) 似乎未被下载")
+                continue
+            }
+            
+            let nativesDirectory: URL = runningDirectory.appending(path: "natives")
+            let archive: Archive = try .init(url: url, accessMode: .read)
+            for entry in archive where entry.type == .file {
+                if entry.path.hasSuffix(".dylib") || entry.path.hasSuffix(".jnilib") {
+                    guard let name: String = entry.path.split(separator: "/").last.map(String.init) else {
+                        warn("获取 \(entry.path) 的文件名失败")
+                        continue
+                    }
+                    let destination: URL = nativesDirectory.appending(path: name)
+                    if FileManager.default.fileExists(atPath: destination.path) { continue }
+                    _ = try archive.extract(entry, to: destination)
+                }
+            }
+        }
+        await MainActor.run {
+            progressHandler(1)
+        }
+    }
+    
     public class Model: TaskModel {
         public let name: String
         public let version: MinecraftVersion
@@ -213,6 +267,7 @@ public enum MinecraftInstallTask {
         public let repository: MinecraftRepository
         
         public var manifest: ClientManifest!
+        public var mappedManifest: ClientManifest!
         public var assetIndex: AssetIndex!
         
         public init(name: String, version: MinecraftVersion, repository: MinecraftRepository) {

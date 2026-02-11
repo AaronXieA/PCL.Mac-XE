@@ -74,6 +74,7 @@ public enum MinecraftLaunchTask {
         
         if let runtime {
             model.options.javaRuntime = runtime
+            model.manifest = NativesMapper.map(model.manifest, to: runtime.architecture)
         }
     }
     
@@ -99,6 +100,7 @@ public enum MinecraftLaunchTask {
     }
     
     private static func precheck(task: SubTask, model: Model) async throws {
+        model.options.manifest = model.manifest
         try model.options.validate()
         let entries: [LaunchPrecheck.Entry] = LaunchPrecheck.check(for: model.instance, with: model.options, hasMicrosoftAccount: LauncherConfig.shared.hasMicrosoftAccount)
         log("共 \(entries.count) 个问题：\(entries)")
@@ -154,13 +156,40 @@ public enum MinecraftLaunchTask {
                         break
                     }
                 }
+            case .armNotSupported:
+                if let runtime: JavaRuntime = model.instance.searchJava(arch: .x64) {
+                    if await MessageBoxManager.shared.showText(
+                        title: "不支持的 Java 架构",
+                        content: "你正在启动的版本（\(model.instance.version)）不支持使用 ARM64 架构的 Java！\nPCL.Mac 找到了一个可用的 Java，是否切换并继续启动？",
+                        level: .error,
+                        .init(id: 0, label: "取消", type: .normal),
+                        .init(id: 1, label: "切换并继续", type: .highlight)
+                    ) == 0 {
+                        try task.cancel()
+                    }
+                    model.instance.setJava(url: runtime.executableURL)
+                    model.options.javaRuntime = runtime
+                    model.manifest = model.instance.manifest
+                }
             }
         }
     }
     
     private static func checkResources(task: SubTask, model: Model) async throws {
+        // 防止本地库架构与 Java 架构不同，先清除本地库
+        let nativesURL: URL = model.instance.runningDirectory.appending(path: "natives")
+        if FileManager.default.fileExists(atPath: nativesURL.path) {
+            do {
+                try FileManager.default.removeItem(at: nativesURL)
+                log("删除本地库目录成功")
+            } catch {
+                err("删除本地库目录失败：\(error.localizedDescription)")
+            }
+        }
+        
         try await MinecraftInstallTask.completeResources(
-            instance: model.instance,
+            runningDirectory: model.instance.runningDirectory,
+            manifest: model.manifest,
             repository: model.repository,
             progressHandler: task.setProgress(_:)
         )
@@ -227,6 +256,7 @@ public enum MinecraftLaunchTask {
         public let account: Account
         public let repository: MinecraftRepository
         public let onProcessStarted: (MinecraftLauncher, Process) -> Void
+        public var manifest: ClientManifest
         public var launcher: MinecraftLauncher?
         public var options: LaunchOptions
         public var process: Process?
@@ -236,11 +266,11 @@ public enum MinecraftLaunchTask {
             self.account = account
             self.repository = repository
             self.onProcessStarted = onProcessStarted
+            self.manifest = instance.manifest
             self.options = .init()
             
             self.options.profile = account.profile
             self.options.runningDirectory = instance.runningDirectory
-            self.options.manifest = instance.manifest
             self.options.repository = repository
             self.options.memory = instance.config.jvmHeapSize
         }

@@ -32,6 +32,9 @@ public class MinecraftInstance {
         self.manifest = manifest
         self.config = config
         VersionCache.add(version: version, for: self)
+        if config.javaURL == nil {
+            setJava(url: searchJava().map(\.executableURL))
+        }
     }
     
     /// 设置 JVM Heap Size 并保存。
@@ -47,10 +50,12 @@ public class MinecraftInstance {
     }
     
     /// 搜索最适合的 Java。
-    /// - Parameter research: 是否重新构建 Java 列表。
+    /// - Parameters:
+    ///   - arch: 目标 Java 架构。
+    ///   - research: 是否重新构建 Java 列表。
     /// - Returns: 搜到的 Java。
     @discardableResult
-    public func searchJava(research: Bool = false) -> JavaRuntime? {
+    public func searchJava(arch: Architecture? = nil, research: Bool = false) -> JavaRuntime? {
         if research {
             do {
                 try JavaManager.shared.research()
@@ -60,7 +65,7 @@ public class MinecraftInstance {
         }
         func getScore(of runtime: JavaRuntime) -> Int {
             var score: Int = 0
-            if runtime.architecture == .systemArchitecture() { score += 3 }
+            if runtime.architecture == (version > .init("1.7.2") ? .systemArchitecture() : .x64) { score += 3 }
             if runtime.versionNumber == manifest.javaVersion.majorVersion { score += 2 }
             if runtime.type == .jdk { score += 1 }
             if runtime.implementor.contains("Azul") { score += 1 }
@@ -68,9 +73,9 @@ public class MinecraftInstance {
         }
         
         if let runtime: JavaRuntime = JavaManager.shared.javaRuntimes
+            .filter({ $0.architecture == (arch ?? $0.architecture) })
             .filter({ $0.versionNumber >= manifest.javaVersion.majorVersion })
-            .sorted(by: { getScore(of: $0) > getScore(of: $1) })
-            .first {
+            .max(by: { getScore(of: $0) > getScore(of: $1) }) {
             return runtime
         }
         warn("未找到 \(version) 可用的 Java")
@@ -116,6 +121,7 @@ public class MinecraftInstance {
         do {
             manifest = try JSONDecoder.shared.decode(ClientManifest.self, from: Data(contentsOf: manifestURL))
         } catch {
+            err("加载客户端清单失败：\(error)")
             throw MinecraftError.unknownManifestFormat
         }
         // 获取版本
@@ -152,12 +158,6 @@ public class MinecraftInstance {
             manifest: manifest,
             config: config ?? .init()
         )
-        if !FileManager.default.fileExists(atPath: configURL.path) {
-            instance.saveConfig()
-        }
-        if instance.config.javaURL == nil {
-            instance.setJava(url: instance.searchJava()?.executableURL)
-        }
         return instance
     }
     
