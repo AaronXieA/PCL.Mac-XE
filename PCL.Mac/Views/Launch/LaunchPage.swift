@@ -9,7 +9,7 @@ import SwiftUI
 import Core
 
 struct LaunchPage: View {
-    @StateObject private var loadingModel: MyLoadingViewModel = .init(text: "加载中")
+    @StateObject private var loadingModel: MyLoadingViewModel = .init(text: "MyLoading 测试")
     private let listItems: [ListItem] = [
         .init(name: "name1", description: "desc1"),
         .init(name: "name2", description: "desc2"),
@@ -27,6 +27,7 @@ struct LaunchPage: View {
     
     var body: some View {
         CardContainer {
+            MyTip(text: "这是一个用于预览与测试控件的主页！", theme: .blue)
             MyCard("可折叠的卡片") {
                 VStack {
                     MyText("文本")
@@ -125,9 +126,11 @@ struct LaunchPage: View {
                 HStack(spacing: 22) {
                     MyButton("fail()", type: .red) { loadingModel.fail(with: "加载失败") }
                         .frame(width: 120)
+                    MyButton("reset()", type: .normal) { loadingModel.reset() }
+                        .frame(width: 120)
                     Spacer()
                 }
-                .frame(height: 36)
+                .frame(height: 35)
             }
             .cardIndex(5)
             
