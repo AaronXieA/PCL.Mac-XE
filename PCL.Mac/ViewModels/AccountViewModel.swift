@@ -37,7 +37,7 @@ class AccountViewModel: ObservableObject {
     public func requestAddAccount() {
         Task {
             log("开始请求添加账号")
-            guard let idx: Int = await MessageBoxManager.shared.showList(
+            guard let idx: Int = await MessageBoxManager.shared.showListAsync(
                 title: "选择账号类型",
                 items: [
                     .init(image: "IconMicrosoftAccount", imageSize: 32, name: "正版账号", description: nil),
@@ -152,45 +152,45 @@ class AccountViewModel: ObservableObject {
                 case .xboxAuthenticationFailed(let code):
                     switch code {
                     case 2148916238:
-                        await showErrorMessageBox(
+                        showErrorMessageBox(
                             "Xbox 验证失败",
                             "当前账户为未成年账户，无法通过 Xbox Live 认证。\n请点击下方的“确定”按钮，更改账户年龄后再次尝试登录。",
                             "https://support.microsoft.com/account-billing/837badbc-999e-54d2-2617-d19206b9540a"
                         )
                     case 2148916233:
-                        await showErrorMessageBox(
+                        showErrorMessageBox(
                             "Xbox 验证失败",
                             "该微软账户没有关联 Xbox 账户。\n请点击下方的“确定”按钮，关联 Xbox 账户后再次尝试登录。",
                             "https://www.minecraft.net/msaprofile/mygames/editprofile"
                         )
                     default:
-                        _ = await MessageBoxManager.shared.showText(
+                        MessageBoxManager.shared.showText(
                             title: "Xbox 验证失败",
                             content: "发生未知错误。错误代码：\(code)",
                             level: .error
                         )
                     }
                 case .apiError(let description):
-                    _ = await MessageBoxManager.shared.showText(
+                    MessageBoxManager.shared.showText(
                         title: "添加正版账号失败",
                         content: "响应体：\(description)",
                         level: .error
                     )
                 case .internalError:
-                    _ = await MessageBoxManager.shared.showText(
+                    MessageBoxManager.shared.showText(
                         title: "添加正版账号失败",
                         content: "发生内部错误。\n若要寻求帮助，请将完整日志发送给他人，而不是发送此页面相关的图片。",
                         level: .error
                     )
                 case .notPurchased:
-                    await showErrorMessageBox(
+                    showErrorMessageBox(
                         "添加正版账号失败",
                         "看起来你还没有购买 Minecraft。\n如果你已购买 Minecraft，请点击下方的“确定”按钮，创建档案后再次尝试登录。",
                         "https://www.minecraft.net/msaprofile/mygames/editprofile"
                     )
                 }
             } catch {
-                _ = await MessageBoxManager.shared.showText(
+                MessageBoxManager.shared.showText(
                     title: "添加正版账号失败",
                     content: "\(error.localizedDescription)\n若要寻求帮助，请将完整日志发送给他人，而不是发送此页面相关的图片。"
                 )
@@ -198,7 +198,7 @@ class AccountViewModel: ObservableObject {
             }
         }
         
-        if await MessageBoxManager.shared.showText(
+        if await MessageBoxManager.shared.showTextAsync(
             title: "添加正版账号",
             content: "请打开 \(code.verificationURL)，然后输入 \(code.code)，随后根据提示完成后续授权步骤。\n点击下方按钮可以一键复制并跳转！",
             .init(id: 0, label: "复制并跳转", type: .highlight) {
@@ -206,27 +206,29 @@ class AccountViewModel: ObservableObject {
                 NSPasteboard.general.setString(code.code, forType: .string)
                 NSWorkspace.shared.open(code.verificationURL)
             },
-            .init(id: 1, label: "取消", type: .red)
+            .no()
         ) == 1 {
             log("用户取消了授权")
             authTask.cancel()
         }
     }
     
-    private func showErrorMessageBox(_ title: String, _ content: String, _ link: String) async {
-        if await MessageBoxManager.shared.showText(
+    private func showErrorMessageBox(_ title: String, _ content: String, _ link: String) {
+        MessageBoxManager.shared.showText(
             title: title,
             content: content,
             level: .error,
-            .init(id: 0, label: "取消", type: .normal),
-            .init(id: 1, label: "确定", type: .highlight)
-        ) == 1 {
-            NSWorkspace.shared.open(link.url!)
+            .no(),
+            .yes(type: .highlight)
+        ) { result in
+            if result == 1 {
+                NSWorkspace.shared.open(link.url!)
+            }
         }
     }
     
     private func requestAddOfflineAccount() async {
-        guard let playerName: String = await MessageBoxManager.shared.showInput(title: "玩家名") else {
+        guard let playerName: String = await MessageBoxManager.shared.showInputAsync(title: "玩家名") else {
             log("用户取消了添加")
             return
         }

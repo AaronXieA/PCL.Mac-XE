@@ -75,22 +75,22 @@ struct InstanceListSidebar: Sidebar {
     private func importModpack(_ url: URL, repository: MinecraftRepository) async {
         do {
             guard let result: ModpackViewModel.ModpackLoadResult = try modpackViewModel.loadModpack(at: url) else {
-                _ = await MessageBoxManager.shared.showText(
+                _ = await MessageBoxManager.shared.showTextAsync(
                     title: "不支持的整合包格式",
                     content: "很抱歉，PCL.Mac 目前只支持导入 Modrinth 格式的整合包，不支持这个整合包使用的格式……",
                     level: .error
                 )
                 return
             }
-            guard await MessageBoxManager.shared.showText(
+            guard await MessageBoxManager.shared.showTextAsync(
                 title: "整合包信息",
                 content: "格式：\(result.format)\n名称：\(result.name)\n版本：\(result.version)\n描述：\(result.summary)\n依赖：\(result.dependencyInfo)\n\n是否继续安装？",
                 level: .info,
-                .init(id: 0, label: "否", type: .normal),
-                .init(id: 1, label: "是", type: .highlight)
+                .no(),
+                .yes(label: "继续")
             ) == 1 else { return }
             
-            guard var name: String = await MessageBoxManager.shared.showInput(
+            guard var name: String = await MessageBoxManager.shared.showInputAsync(
                 title: "导入整合包 - 输入实例名",
                 initialContent: result.name
             ) else { return }
