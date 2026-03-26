@@ -103,6 +103,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 LauncherConfig.shared.hasEnteredLauncher = true
             }
         }
+        UpdateService.shared.runInteractiveUpdateFlow()
     }
     
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
