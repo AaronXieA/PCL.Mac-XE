@@ -11,7 +11,7 @@ import SwiftyJSON
 public class CLAPIClient {
     public static let shared: CLAPIClient = .init()
     
-    private let apiRoot: URL = .init(string: "https://api.ceciliastudio.top")!
+    private let apiRoot: URL = .init(string: "https://api.cylorine.studio")!
     private let iso8601DateFormatter: ISO8601DateFormatter = .init()
     
     public func getCaveMessages() async throws -> [String] {
@@ -28,6 +28,10 @@ public class CLAPIClient {
             }
             return .unavailable(message: json["message"].string ?? "无", date: date)
         }
+    }
+    
+    public func getEasyTierPeers() async throws -> [String] {
+        try await get("/easytier/peers").arrayValue.map(\.stringValue)
     }
     
     private init() {}
