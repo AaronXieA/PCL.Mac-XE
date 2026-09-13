@@ -41,6 +41,9 @@ struct MyCard<Content: View, Action: View>: View {
     private let title: String
     private let foldable: Bool
     private let initialFolded: Bool
+    
+    /// 卡片折叠状态的外部绑定，为 `nil` 时折叠状态完全由内部管理。
+    private let isFolded: Binding<Bool>?
     private let titled: Bool
     private let padding: CGFloat
     private let content: () -> Content
@@ -58,6 +61,7 @@ struct MyCard<Content: View, Action: View>: View {
         _ title: String?,
         foldable: Bool = true,
         folded: Bool? = nil,
+        isFolded: Binding<Bool>? = nil,
         padding: CGFloat = 18,
         @ViewBuilder _ content: @escaping () -> Content,
         @ViewBuilder action: @escaping () -> Action = { EmptyView() }
@@ -66,6 +70,7 @@ struct MyCard<Content: View, Action: View>: View {
         self.titled = title != nil
         self.foldable = foldable && titled
         self.initialFolded = folded ?? (self.foldable ? true : false)
+        self.isFolded = isFolded
         self.padding = padding
         self.content = content
         self.action = action
@@ -92,41 +97,7 @@ struct MyCard<Content: View, Action: View>: View {
                 .padding(12)
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    guard foldable else { return }
-                    self.foldWorkItem?.cancel()
-                    interactionState.isTransitioning = true
-                    
-                    if folded {
-                        // 展开卡片
-                        withAnimation(.spring(response: 0.35)) {
-                            folded = false
-                        }
-                        showContent = true
-                        withAnimation(.linear(duration: 0.2)) {
-                            contentHeightLimit = min(1000, actualContentHeight) + padding
-                        }
-                        let foldWorkItem: DispatchWorkItem = .init {
-                            contentHeightLimit = nil
-                            interactionState.isTransitioning = false
-                        }
-                        self.foldWorkItem = foldWorkItem
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: foldWorkItem)
-                    } else {
-                        // 折叠卡片
-                        withAnimation(.spring(response: 0.35)) {
-                            folded = true
-                        }
-                        let foldWorkItem: DispatchWorkItem = .init {
-                            showContent = false
-                            interactionState.isTransitioning = false
-                        }
-                        self.foldWorkItem = foldWorkItem
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7, execute: foldWorkItem)
-                        contentHeightLimit = min(1000, actualContentHeight) + padding // 控制回弹上限
-                        withAnimation(.spring(response: 0.35)) {
-                            contentHeightLimit = 0
-                        }
-                    }
+                    setFolded(!folded)
                 }
             }
             
@@ -195,6 +166,51 @@ struct MyCard<Content: View, Action: View>: View {
                 contentHeightLimit = 0
             }
         }
+        .onChange(of: isFolded?.wrappedValue) { newValue in
+            guard let newValue, newValue != folded else { return }
+            setFolded(newValue)
+        }
+    }
+    
+    /// 修改卡片折叠状态（带动画），并通过 `isFolded` 同步给外部。
+    private func setFolded(_ target: Bool) {
+        guard foldable, target != folded else { return }
+        foldWorkItem?.cancel()
+        interactionState.isTransitioning = true
+        
+        if !target {
+            // 展开卡片
+            withAnimation(.spring(response: 0.35)) {
+                folded = false
+            }
+            showContent = true
+            withAnimation(.linear(duration: 0.2)) {
+                contentHeightLimit = min(1000, actualContentHeight) + padding
+            }
+            let foldWorkItem: DispatchWorkItem = .init {
+                contentHeightLimit = nil
+                interactionState.isTransitioning = false
+            }
+            self.foldWorkItem = foldWorkItem
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: foldWorkItem)
+        } else {
+            // 折叠卡片
+            withAnimation(.spring(response: 0.35)) {
+                folded = true
+            }
+            let foldWorkItem: DispatchWorkItem = .init {
+                showContent = false
+                interactionState.isTransitioning = false
+            }
+            self.foldWorkItem = foldWorkItem
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7, execute: foldWorkItem)
+            contentHeightLimit = min(1000, actualContentHeight) + padding // 控制回弹上限
+            withAnimation(.spring(response: 0.35)) {
+                contentHeightLimit = 0
+            }
+        }
+        
+        isFolded?.wrappedValue = target
     }
 }
 

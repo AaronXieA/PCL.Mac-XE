@@ -89,6 +89,7 @@ private struct ModLoaderCard: View {
     @Binding private var currentLoader: MinecraftInstallTask.Loader?
     @State private var versions: [Version]?
     @State private var loadState: LoadState = .loading
+    @State private var cardFolded: Bool = true
     private let type: ModLoader
     private let minecraftVersion: String
     
@@ -101,11 +102,12 @@ private struct ModLoaderCard: View {
     var body: some View {
         MyCard(nil, padding: 0) {
             ZStack(alignment: .topLeading) {
-                MyCard(type.description, foldable: loadState == .finished, folded: true) {
+                MyCard(type.description, foldable: loadState == .finished, folded: true, isFolded: $cardFolded) {
                     if let versions {
                         MyList(items: versions.map { ListItem(image: type.icon, name: $0.id, description: $0.beta ? "测试版" : "稳定版") }) { index in
                             if let index {
                                 currentLoader = MinecraftInstallTask.Loader(type: type, version: versions[index].id)
+                                cardFolded = true
                             } else {
                                 currentLoader = nil
                             }
