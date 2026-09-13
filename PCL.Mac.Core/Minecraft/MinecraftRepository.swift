@@ -155,10 +155,11 @@ public class MinecraftRepository: ObservableObject, Codable, Identifiable, Hasha
         
         let instanceDirectories: [URL] = try FileManager.default.contentsOfDirectory(
             at: versionsDirectory,
-            includingPropertiesForKeys: [.isDirectoryKey]
+            includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey]
         ).filter { url in
-            let resourceValues = try url.resourceValues(forKeys: [.isDirectoryKey])
-            return resourceValues.isDirectory == true
+            // 跟随软链接判断目标是否为目录，兼容通过 symlink/junction 挂载的实例目录
+            var isDirectory: ObjCBool = false
+            return FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) && isDirectory.boolValue
         }
         
         return await withTaskGroup { group in
