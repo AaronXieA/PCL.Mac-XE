@@ -107,6 +107,9 @@ private struct MessageBoxOverlay: View {
     @State private var rotation: CGFloat = 4
     @State private var offsetY: CGFloat = 40
     
+    /// 遮罩是否可交互（阻挡点击）。与视觉 opacity 解耦，避免动画期间点击穿透。
+    @State private var interactive: Bool = false
+    
     @State private var animationHideWorkItem: DispatchWorkItem?
     
     var body: some View {
@@ -115,10 +118,13 @@ private struct MessageBoxOverlay: View {
                 ZStack {
                     Rectangle()
                         .fill(messageBox.level == .error ? Color(0xFF0000).opacity(0.5) : .black.opacity(0.35))
+                        .contentShape(Rectangle())
                     MessageBoxView(model: messageBox)
                         .rotationEffect(.degrees(rotation))
                         .offset(y: offsetY)
                 }
+                .contentShape(Rectangle())
+                .allowsHitTesting(interactive)
                 .opacity(opacity)
             }
         }
@@ -126,6 +132,8 @@ private struct MessageBoxOverlay: View {
             if newValue != nil { // 移入
                 animationHideWorkItem?.cancel()
                 messageBox = newValue
+                // 立即阻挡点击，再播放淡入动画
+                interactive = true
                 withAnimation(.spring(duration: 0.3, bounce: 0.3)) {
                     offsetY = 0
                 }
@@ -138,6 +146,7 @@ private struct MessageBoxOverlay: View {
                     self.messageBox = nil
                     self.rotation = 4
                     self.offsetY = 40
+                    self.interactive = false
                 }
                 animationHideWorkItem = workItem
                 let duration: CGFloat = 0.15
