@@ -28,6 +28,18 @@ class AppWindow: NSWindow {
         
         self.setFrameAutosaveName("AppWindow")
         self.center()
+        
+        // 窗口大小改变后系统会重置标题栏按钮位置，需重新定位
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowDidResize(_:)),
+            name: NSWindow.didResizeNotification,
+            object: self
+        )
+    }
+    
+    @objc private func windowDidResize(_ notification: Notification) {
+        layoutIfNeeded()
     }
     
     override func layoutIfNeeded() {
@@ -38,8 +50,12 @@ class AppWindow: NSWindow {
             if isMacOS14OrLater {
                 close.frame.origin = CGPoint(x: isMacOS26 ? 18 : 16, y: isMacOS26 ? 0 : -4)
                 min.frame.origin = CGPoint(x: close.frame.maxX + (isMacOS26 ? 8 : 6), y: close.frame.minY)
+                zoom.frame.origin = CGPoint(x: min.frame.maxX + (isMacOS26 ? 8 : 6), y: close.frame.minY)
             }
-            zoom.frame.origin = CGPoint(x: 64, y: 64)
         }
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 }
