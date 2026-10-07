@@ -1,6 +1,6 @@
 //
 //  HTTPClient.swift
-//  PCL.Mac
+//  PCL.Mac XE
 //
 //  Created by AnemoFlower on 2025/12/3.
 //
@@ -64,7 +64,7 @@ public class HTTPClient {
         
         /// 编码为请求体数据，并返回 `Content-Type` 请求头的值。
         func encode() -> (data: Data, contentType: String) {
-            let boundary = "PCL.Mac.FormBoundary.\(UUID().uuidString)"
+            let boundary = "PCL.MacXE.FormBoundary.\(UUID().uuidString)"
             var data = Data()
             for part in parts {
                 data.append(Data("--\(boundary)\r\n".utf8))

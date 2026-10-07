@@ -1,6 +1,6 @@
 //
 //  ModUpdateService.swift
-//  PCL.Mac
+//  PCL.Mac XE
 //
 //  Created by Wunanc on 2026/10/7.
 //
@@ -22,6 +22,30 @@ enum ModUpdateService {
     /// 任务模型，用于在子任务间共享待更新列表。
     private class UpdateModel: TaskModel {
         var entries: [UpdateEntry] = []
+    }
+    
+    /// 检查并创建一键更新任务（自动加载实例 mods 目录中的资源）。
+    /// - Parameters:
+    ///   - instance: 目标实例。
+    ///   - completion: 任务完成（无错误）后的回调。
+    @MainActor
+    static func requestUpdate(for instance: MinecraftInstance, completion: @escaping () -> Void) async {
+        let directory: URL = instance.url.appending(path: ResourceType.mod.saveDirectory!)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        
+        let service: ResourceLoadService = .init(
+            preferredType: .mod,
+            remoteLookupService: .init(curseforgeClient: .init(apiKey: Secrets.shared.curseforgeApiKey ?? "")),
+            cache: .shared
+        )
+        let resources: [(URL, Resource)]
+        do {
+            resources = try await service.loadResources(in: directory).map { ($0, $1) }
+        } catch {
+            err("加载模组列表失败：\(error.localizedDescription)")
+            return
+        }
+        requestUpdate(for: instance, resources: resources, completion: completion)
     }
     
     /// 检查并创建一键更新任务。

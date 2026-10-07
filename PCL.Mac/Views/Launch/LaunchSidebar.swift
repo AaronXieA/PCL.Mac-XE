@@ -1,6 +1,6 @@
 //
 //  LaunchSidebar.swift
-//  PCL.Mac
+//  PCL.Mac XE
 //
 //  Created by AnemoFlower on 2025/11/10.
 //
@@ -60,6 +60,24 @@ struct LaunchSidebar: Sidebar {
 
             Spacer()
             VStack(spacing: 11) {
+                if let instance = instanceVM.currentInstance, instance.modLoader != nil {
+                    MyButton("一键更新模组", type: .black) {
+                        Task {
+                            if await MessageBoxManager.shared.showTextAsync(
+                                title: "确认",
+                                content: "确定要检查并更新实例（\(instance.name)）的所有模组吗？\n更新任务将在后台执行，可在任务页面查看进度。",
+                                level: .info,
+                                .no(),
+                                .yes(type: .highlight)
+                            ) == 1 {
+                                await ModUpdateService.requestUpdate(for: instance) {
+                                    hint("模组更新完成！", type: .finish)
+                                }
+                            }
+                        }
+                    }
+                    .frame(height: 32)
+                }
                 Group {
                     if let instance = instanceVM.currentInstance {
                         MyButton("启动游戏", subLabel: instance.name, type: .highlight) {

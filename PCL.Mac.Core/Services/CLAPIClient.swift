@@ -1,6 +1,6 @@
 //
 //  CLAPIClient.swift
-//  PCL.Mac
+//  PCL.Mac XE
 //
 //  Created by AnemoFlower on 2026/2/25.
 //
@@ -15,7 +15,17 @@ public class CLAPIClient {
     private let iso8601DateFormatter: ISO8601DateFormatter = .init()
     
     public func getCaveMessages() async throws -> [String] {
-        try await get("/cave").arrayValue.map(\.stringValue)
+        // 回声洞托管在 xrst.uk，与其余 cylorine.studio 接口分开请求
+        let json: JSON = try await HTTPClient.shared.request(
+            url: "https://xrst.uk/api/cave",
+            method: "GET",
+            throwOnError: true,
+            timeout: 30
+        ).json()
+        let response: Response = .init(json: json)
+        guard response.code == 0 else { throw Error.apiError(code: response.code, message: response.msg) }
+        guard let data: JSON = response.data else { throw Error.missingData }
+        return data.arrayValue.map(\.stringValue)
     }
     
     public func getEasyTierStatus() async throws -> EasyTierStatus {

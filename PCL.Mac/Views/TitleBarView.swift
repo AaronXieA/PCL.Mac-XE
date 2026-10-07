@@ -1,6 +1,6 @@
 //
 //  TitleBarView.swift
-//  PCL.Mac
+//  PCL.Mac XE
 //
 //  Created by AnemoFlower on 2025/11/10.
 //
@@ -31,7 +31,7 @@ struct TitleBarView: View {
                             .scaledToFit()
                             .foregroundStyle(.white)
                             .frame(height: 19)
-                        MyTag("Mac", labelColor: .color2)
+                        MyTag("XE", labelColor: .color2)
                         
                         if Metadata.debugMode {
                             MyTag("Debug", backgroundColor: Color(0x9BF00B))

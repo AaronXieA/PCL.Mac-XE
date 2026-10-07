@@ -651,7 +651,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PCL.Mac/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = PCL.Mac;
+				INFOPLIST_KEY_CFBundleDisplayName = "PCL.Mac XE";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Minecraft 正在请求访问麦克风。";
@@ -683,7 +683,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PCL.Mac/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = PCL.Mac;
+				INFOPLIST_KEY_CFBundleDisplayName = "PCL.Mac XE";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Minecraft 正在请求访问麦克风。";

@@ -1,6 +1,6 @@
 //
 //  InstalledResourcesPage.swift
-//  PCL.Mac
+//  PCL.Mac XE
 //
 //  Created by AnemoFlower on 2026/6/7.
 //
@@ -68,12 +68,6 @@ struct InstalledResourcesPage: View {
                                 }
                             }
                             .frame(width: 120)
-                            if viewModel.type == .mod {
-                                MyButton("一键更新模组") {
-                                    viewModel.updateAllMods()
-                                }
-                                .frame(width: 120)
-                            }
                             Spacer(minLength: 0)
                         }
                         .frame(height: 40)

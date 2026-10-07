@@ -1,6 +1,6 @@
 //
 //  RightRoundedRectangle.swift
-//  PCL.Mac
+//  PCL.Mac XE
 //
 //  Created by AnemoFlower on 2026/1/26.
 //

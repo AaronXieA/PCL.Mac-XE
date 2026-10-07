@@ -1,6 +1,6 @@
 //
 //  SettingsViewModel.swift
-//  PCL.Mac
+//  PCL.Mac XE
 //
 //  Created by AnemoFlower on 2026/3/26.
 //
@@ -19,7 +19,7 @@ class SettingsViewModel: ObservableObject {
     }()
     
     public func exportLogs() throws -> URL {
-        let destination: URL = FileManager.default.homeDirectoryForCurrentUser.appending(path: "Desktop/PCL.Mac-logs-\(dateFormatter.string(from: .now)).zip")
+        let destination: URL = FileManager.default.homeDirectoryForCurrentUser.appending(path: "Desktop/PCL.Mac.XE-logs-\(dateFormatter.string(from: .now)).zip")
         try FileManager.default.zipItem(at: URLConstants.logsDirectoryURL, to: destination, shouldKeepParent: false)
         return destination
     }

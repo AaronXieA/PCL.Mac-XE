@@ -1,6 +1,6 @@
 //
 //  AppDelegate.swift
-//  PCL.Mac
+//  PCL.Mac XE
 //
 //  Created by AnemoFlower on 2025/11/8.
 //
@@ -48,7 +48,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             try URLConstants.createDirectories()
         } catch {
             let alert = NSAlert()
-            alert.messageText = "PCL.Mac 启动失败：创建数据目录失败。"
+            alert.messageText = "PCL.Mac XE 启动失败：创建数据目录失败。"
             alert.informativeText = error.localizedDescription
             alert.alertStyle = .critical
             
@@ -62,7 +62,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             exit(1)
         }
         LogManager.shared.enableLogging()
-        log("正在启动 PCL.Mac.Refactor \(Metadata.appVersion)")
+        log("正在启动 PCL.Mac XE \(Metadata.appVersion)")
         
         debug("系统信息：macOS \(ProcessInfo.processInfo.operatingSystemVersionString) \(Architecture.systemArchitecture())")
         
@@ -145,15 +145,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let loadError = LauncherConfig.loadError {
             MessageBoxManager.shared.showText(
                 title: "加载配置文件失败",
-                content: "很抱歉，PCL.Mac 无法加载启动器配置文件……\n原因可能是文件损坏、代码破坏性变更，或者权限问题。\nPCL.Mac 创建了一个备份文件（\(LauncherConfig.backupURL.path)）以免配置丢失。\n\n错误信息：\(loadError.localizedDescription)",
+                content: "很抱歉，PCL.Mac XE 无法加载启动器配置文件……\n原因可能是文件损坏、代码破坏性变更，或者权限问题。\nPCL.Mac XE 创建了一个备份文件（\(LauncherConfig.backupURL.path)）以免配置丢失。\n\n错误信息：\(loadError.localizedDescription)",
                 level: .error
             )
         }
         
         if !LauncherConfig.shared.hasEnteredLauncher {
             MessageBoxManager.shared.showText(
-                title: "欢迎使用 PCL.Mac！",
-                content: "PCL.Mac 是 Plain Craft Launcher 的非官方衍生版，使用 SwiftUI 框架完全重构了 PCL 以支持 macOS。\n本启动器还处于开发阶段，有许多功能尚未完成，Bug 可能也比较多……\n若要获取帮助或查看更多信息，请访问 Cylorine Studio 官方网站！\n\n在开始使用前，请先阅读 Cylorine Studio 隐私政策。",
+                title: "欢迎使用 PCL.Mac XE！",
+                content: "PCL.Mac XE 是 Plain Craft Launcher 的非官方衍生版，使用 SwiftUI 框架完全重构了 PCL 以支持 macOS。\n本启动器还处于开发阶段，有许多功能尚未完成，Bug 可能也比较多……\n若要获取帮助或查看更多信息，请访问 Cylorine Studio 官方网站！\n\n在开始使用前，请先阅读 Cylorine Studio 隐私政策。",
                 level: .info,
                 .init(id: 0, label: "打开 Cylorine Studio 官网", type: .normal) {
                     NSWorkspace.shared.open(URL(string: "https://cylorine.studio/projects/PCL.Mac.Refactor")!)

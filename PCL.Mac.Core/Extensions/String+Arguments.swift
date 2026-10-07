@@ -1,6 +1,6 @@
 //
 //  String+Arguments.swift
-//  PCL.Mac
+//  PCL.Mac XE
 //
 //  Created by yuanmu on 2026/8/9.
 //

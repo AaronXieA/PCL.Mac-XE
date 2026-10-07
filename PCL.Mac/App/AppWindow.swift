@@ -1,6 +1,6 @@
 //
 //  AppWindow.swift
-//  PCL.Mac
+//  PCL.Mac XE
 //
 //  Created by AnemoFlower on 2025/11/29.
 //
@@ -22,6 +22,7 @@ class AppWindow: NSWindow, NSWindowDelegate {
         )
         self.titleVisibility = .hidden
         self.titlebarAppearsTransparent = true
+        self.title = "PCL XE"
         
         self.standardWindowButton(.zoomButton)?.isHidden = true
         

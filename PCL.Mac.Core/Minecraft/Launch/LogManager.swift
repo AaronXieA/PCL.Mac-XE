@@ -1,6 +1,6 @@
 //
 //  LogManager.swift
-//  PCL.Mac
+//  PCL.Mac XE
 //
 //  Created by AnemoFlower on 2025/11/8.
 //
@@ -17,7 +17,7 @@ public class LogManager {
         formatter.timeZone = TimeZone(identifier: "Asia/Shanghai")
         return formatter
     }()
-    private let logQueue: DispatchQueue = .init(label: "PCL.Mac.Log")
+    private let logQueue: DispatchQueue = .init(label: "PCL.MacXE.Log")
     private let logger: Logger = .init()
     
     public func enableLogging(logsURL: URL = URLConstants.logsDirectoryURL) {

@@ -1,6 +1,6 @@
 //
 //  InstalledResourcesViewModel.swift
-//  PCL.Mac
+//  PCL.Mac XE
 //
 //  Created by AnemoFlower on 2026/6/7.
 //
@@ -156,15 +156,5 @@ class InstalledResourcesViewModel: ObservableObject {
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         
         return url
-    }
-    
-    /// 一键更新实例中所有 Mod。
-    func updateAllMods() {
-        guard type == .mod, let _instance, let loadResult else { return }
-        ModUpdateService.requestUpdate(for: _instance, resources: loadResult) { [weak self] in
-            Task {
-                try? await self?.load(resetPage: false)
-            }
-        }
     }
 }

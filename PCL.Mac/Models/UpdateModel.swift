@@ -1,6 +1,6 @@
 //
 //  UpdateModel.swift
-//  PCL.Mac
+//  PCL.Mac XE
 //
 //  Created by AnemoFlower on 2026/3/26.
 //

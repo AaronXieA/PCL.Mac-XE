@@ -1,6 +1,6 @@
 //
 //  ToolboxPage.swift
-//  PCL.Mac
+//  PCL.Mac XE
 //
 //  Created by AnemoFlower on 2026/2/25.
 //
@@ -28,7 +28,7 @@ struct ToolboxPage: View {
                     MyButton("千万别点", type: .red) {
                         MessageBoxManager.shared.showText(
                             title: "警告",
-                            content: "PCL.Mac 作者不会受理由于点击千万别点造成的任何 Bug。\n这是最后的警告，是否继续操作？",
+                            content: "PCL.Mac XE 作者不会受理由于点击千万别点造成的任何 Bug。\n这是最后的警告，是否继续操作？",
                             level: .error,
                             .init(id: 0, label: "确定", type: .red),
                             .init(id: 1, label: "确定", type: .normal),
@@ -43,7 +43,7 @@ struct ToolboxPage: View {
                 .frame(height: 40)
             }
             MyCard("回声洞", foldable: false) {
-                MyTip(text: "回声洞里的消息目前还比较有限，所以很可能会重复……\n欢迎前往 https://github.com/CylorineStudio/PCL.Mac.Refactor/discussions/43 进行投稿！", theme: .blue)
+                MyTip(text: "回声洞里的消息目前还比较有限，所以很可能会重复……\n欢迎前往 https://xrst.uk/hsd 进行投稿！", theme: .blue)
                     .padding(.bottom, 10)
                 Color.clear
                     .modifier(CaveMessageModifier(text: viewModel.currentCaveMessage, progress: viewModel.revealProgress))

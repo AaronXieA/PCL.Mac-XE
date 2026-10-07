@@ -1,6 +1,6 @@
 //
 //  MultiplayerPage.swift
-//  PCL.Mac
+//  PCL.Mac XE
 //
 //  Created by AnemoFlower on 2026/1/15.
 //
@@ -209,7 +209,7 @@ struct MultiplayerPage: View {
         if await LocaleUtils.isInChinaMainland(strict: false) == false {
             MessageBoxManager.shared.showText(
                 title: "不支持的地区",
-                content: "PCL.Mac 目前只支持中国大陆地区。\n如果您在中国大陆，并使用了 VPN 等工具，请先关闭它们，然后再次尝试！",
+                content: "PCL.Mac XE 目前只支持中国大陆地区。\n如果您在中国大陆，并使用了 VPN 等工具，请先关闭它们，然后再次尝试！",
                 level: .error
             )
             throw SimpleError("不支持的地区")

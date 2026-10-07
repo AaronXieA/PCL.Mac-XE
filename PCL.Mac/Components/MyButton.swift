@@ -1,6 +1,6 @@
 //
 //  MyButton.swift
-//  PCL.Mac
+//  PCL.Mac XE
 //
 //  Created by AnemoFlower on 2025/12/4.
 //
@@ -78,13 +78,14 @@ struct MyButton: View {
     }
     
     enum `Type` {
-        case normal, highlight, red
+        case normal, highlight, red, black
         
         var color: Color {
             switch self {
             case .normal: .color1
             case .highlight: .color2
             case .red: Color(0xCE2111)
+            case .black: .black
             }
         }
         
@@ -93,6 +94,7 @@ struct MyButton: View {
             case .normal: .color3
             case .highlight: .color3
             case .red: Color(0xFF4C4C)
+            case .black: Color(0x404040)
             }
         }
     }

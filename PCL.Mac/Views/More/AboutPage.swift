@@ -1,6 +1,6 @@
 //
 //  AboutPage.swift
-//  PCL.Mac
+//  PCL.Mac XE
 //
 //  Created by AnemoFlower on 2026/1/7.
 //
@@ -26,9 +26,11 @@ struct AboutPage: View {
                                 .init("GitHub 主页", "https://github.com/CylorineStudio"),
                                 .init("官方网站", "https://cylorine.studio"))
                     
-                    ProfileView(.local(.pclMac), "PCL.Mac.Refactor", "当前版本：\(Metadata.appVersion) (\(Metadata.bundleVersion))",
-                                .init("GitHub 仓库", "https://github.com/CylorineStudio/PCL.Mac.Refactor"),
-                                .init("官网页面", "https://cylorine.studio/projects/PCL.Mac.Refactor"))
+                    ProfileView(.local(.aaronXieA), "AaronXieA", "参考了大部分 PCL.Mac.Refactor 代码，PCL.Mac XE 作者！",
+                                .init("GitHub 主页", "https://github.com/AaronXieA"))
+                    
+                    ProfileView(.local(.pclMac), "PCL.Mac XE", "当前版本：\(Metadata.appVersion) (\(Metadata.bundleVersion))",
+                                .init("GitHub 仓库", "https://github.com/AaronXieA/PCL.Mac.Buggest"))
                 }
             }
             

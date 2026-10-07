@@ -1,6 +1,6 @@
 //
 //  MinecraftLaunchTask.swift
-//  PCL.Mac
+//  PCL.Mac XE
 //
 //  Created by AnemoFlower on 2026/2/5.
 //
@@ -86,7 +86,7 @@ public enum MinecraftLaunchTask {
             
             let result = await MessageBoxManager.shared.showTextAsync(
                 title: title,
-                content: "\(reason)\n\nPCL.Mac 找到了一个可用的 Java：\(bestMatch)，\(issueText)是否切换并继续启动？",
+                content: "\(reason)\n\nPCL.Mac XE 找到了一个可用的 Java：\(bestMatch)，\(issueText)是否切换并继续启动？",
                 level: force ? .error : .info,
                 buttons: buttons
             )

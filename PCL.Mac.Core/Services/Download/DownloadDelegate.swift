@@ -1,6 +1,6 @@
 //
 //  DownloadDelegate.swift
-//  PCL.Mac
+//  PCL.Mac XE
 //
 //  Created by AnemoFlower on 2025/12/16.
 //
@@ -11,7 +11,7 @@ public class DownloadDelegate: NSObject, URLSessionDownloadDelegate {
     public static let shared: DownloadDelegate = .init()
     public static let queue: OperationQueue = {
         let queue: OperationQueue = OperationQueue()
-        queue.name = "PCL.Mac.DownloadDelegate"
+        queue.name = "PCL.MacXE.DownloadDelegate"
         queue.maxConcurrentOperationCount = 1
         return queue
     }()

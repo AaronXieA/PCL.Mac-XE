@@ -1,6 +1,6 @@
 //
 //  MinecraftLauncher.swift
-//  PCL.Mac
+//  PCL.Mac XE
 //
 //  Created by AnemoFlower on 2025/11/26.
 //
@@ -8,7 +8,7 @@
 import Foundation
 
 public class MinecraftLauncher {
-    private static let gameLogQueue: DispatchQueue = .init(label: "PCL.Mac.GameLog")
+    private static let gameLogQueue: DispatchQueue = .init(label: "PCL.MacXE.GameLog")
     public let options: LaunchOptions
     public let logURL: URL
     private let manifest: ClientManifest
@@ -24,7 +24,7 @@ public class MinecraftLauncher {
         self.logURL = URLConstants.tempURL.appending(path: "game-log-\(UUID().uuidString.lowercased()).log")
         self.values = [
             "natives_directory": runningDirectory.appending(path: "natives").path,
-            "launcher_name": "PCL.Mac",
+            "launcher_name": "PCL.Mac XE",
             "launcher_version": Metadata.appVersion,
             "classpath_separator": ":",
             "library_directory": librariesURL.path,
@@ -38,7 +38,7 @@ public class MinecraftLauncher {
             "auth_access_token": options.accessToken,
             "auth_session": options.accessToken,
             "user_type": "msa",
-            "version_type": "PCL.Mac",
+            "version_type": "PCL.Mac XE",
             "user_properties": "{}"
         ]
     }
