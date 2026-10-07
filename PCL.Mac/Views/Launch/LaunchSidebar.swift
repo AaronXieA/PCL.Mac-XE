@@ -70,8 +70,21 @@ struct LaunchSidebar: Sidebar {
                                 .no(),
                                 .yes(type: .highlight)
                             ) == 1 {
-                                await ModUpdateService.requestUpdate(for: instance) {
-                                    hint("模组更新完成！", type: .finish)
+                                await ModUpdateService.requestUpdate(for: instance) { updatedMods in
+                                    Task { @MainActor in
+                                        if updatedMods.isEmpty {
+                                            hint("所有 Mod 都已是最新版本！", type: .finish)
+                                        } else {
+                                            let detail: String = updatedMods.map {
+                                                "· \($0.name)：\($0.oldVersion) → \($0.newVersion)"
+                                            }.joined(separator: "\n")
+                                            await MessageBoxManager.shared.showTextAsync(
+                                                title: "模组更新完成（\(updatedMods.count) 个）",
+                                                content: "以下 Mod 已更新：\n\(detail)",
+                                                level: .info
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }

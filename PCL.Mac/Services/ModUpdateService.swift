@@ -10,6 +10,13 @@ import Core
 
 /// 一键更新实例中所有 Mod 的服务。
 enum ModUpdateService {
+    /// 一个已更新 Mod 的展示信息。
+    struct ModUpdateItem {
+        let name: String
+        let oldVersion: String
+        let newVersion: String
+    }
+
     /// 一次更新操作涉及的 Mod 信息。
     private struct UpdateEntry {
         let url: URL
@@ -27,9 +34,9 @@ enum ModUpdateService {
     /// 检查并创建一键更新任务（自动加载实例 mods 目录中的资源）。
     /// - Parameters:
     ///   - instance: 目标实例。
-    ///   - completion: 任务完成（无错误）后的回调。
+    ///   - completion: 任务完成（无错误）后的回调，参数为实际更新的 Mod 明细。
     @MainActor
-    static func requestUpdate(for instance: MinecraftInstance, completion: @escaping () -> Void) async {
+    static func requestUpdate(for instance: MinecraftInstance, completion: @escaping ([ModUpdateItem]) -> Void) async {
         let directory: URL = instance.url.appending(path: ResourceType.mod.saveDirectory!)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         
@@ -52,18 +59,19 @@ enum ModUpdateService {
     /// - Parameters:
     ///   - instance: 目标实例。
     ///   - resources: 已加载的资源列表（`URL` + `Resource`）。
-    ///   - completion: 任务完成（无错误）后的回调，用于刷新资源列表。
+    ///   - completion: 任务完成（无错误）后的回调，参数为实际更新的 Mod 明细，用于刷新资源列表与展示结果。
     @MainActor
-    static func requestUpdate(for instance: MinecraftInstance, resources: [(URL, Resource)], completion: @escaping () -> Void) {
+    static func requestUpdate(for instance: MinecraftInstance, resources: [(URL, Resource)], completion: @escaping ([ModUpdateItem]) -> Void) {
         let mods: [(URL, Resource)] = resources.filter { $0.1.type == .mod }
         guard !mods.isEmpty else {
             hint("当前实例没有安装任何 Mod！", type: .info)
             return
         }
         
+        let model: UpdateModel = .init()
         let task: MyTask<UpdateModel> = .init(
             name: "更新 Mod - \(instance.name)",
-            model: UpdateModel(),
+            model: model,
             .init(0, "检查更新", display: false) { subTask, model in
                 let entries: [UpdateEntry] = try await checkUpdates(for: instance, mods: mods)
                 model.entries = entries
@@ -79,7 +87,19 @@ enum ModUpdateService {
         
         TaskManager.shared.execute(task: task) { error in
             if error == nil {
-                completion()
+                let items: [ModUpdateItem] = model.entries
+                    .map { entry in
+                        let fileURL: URL = entry.url.pathExtension == "disabled"
+                            ? entry.url.deletingPathExtension()
+                            : entry.url
+                        return ModUpdateItem(
+                            name: entry.resource.name.isEmpty ? fileURL.deletingPathExtension().lastPathComponent : entry.resource.name,
+                            oldVersion: entry.currentVersion.versionNumber,
+                            newVersion: entry.targetVersion.versionNumber
+                        )
+                    }
+                    .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+                completion(items)
             }
         }
     }
