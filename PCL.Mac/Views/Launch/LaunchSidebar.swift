@@ -141,7 +141,7 @@ struct LaunchSidebar: Sidebar {
                         hint("请先选择一个账号！", type: .critical)
                         return
                     }
-                    CapeSelection.request(for: account)
+                    SkinCapeSelection.request(for: account)
                 }
             
             Image(systemName: "arrow.left.arrow.right")

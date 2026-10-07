@@ -31,14 +31,24 @@ struct PlayerAvatar: View {
         .shadow(radius: 2)
         .frame(width: length, height: length)
         .task {
-            let skinData: Data = await viewModel.skinData(for: account)
-            guard let image: CIImage = .init(data: skinData) else {
-                err("加载 CIImage 失败")
-                return
+            await loadSkin()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .playerSkinDidChange)) { notification in
+            guard (notification.object as? UUID) == account.id else { return }
+            Task {
+                await loadSkin()
             }
-            await MainActor.run {
-                self.skinImage = image
-            }
+        }
+    }
+    
+    private func loadSkin() async {
+        let skinData: Data = await viewModel.skinData(for: account)
+        guard let image: CIImage = .init(data: skinData) else {
+            err("加载 CIImage 失败")
+            return
+        }
+        await MainActor.run {
+            self.skinImage = image
         }
     }
 }

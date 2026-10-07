@@ -28,6 +28,64 @@ public class HTTPClient {
         case urlEncoded
     }
     
+    /// 用于构造 `multipart/form-data` 请求体的数据。
+    public struct MultipartFormData {
+        public struct Part {
+            public let name: String
+            public let filename: String?
+            public let contentType: String?
+            public let body: Data
+            
+            public init(name: String, filename: String? = nil, contentType: String? = nil, body: Data) {
+                self.name = name
+                self.filename = filename
+                self.contentType = contentType
+                self.body = body
+            }
+        }
+        
+        private var parts: [Part] = []
+        
+        public init() {}
+        
+        public mutating func add(_ part: Part) {
+            parts.append(part)
+        }
+        
+        /// 添加一个文本字段。
+        public mutating func add(name: String, string: String) {
+            add(Part(name: name, body: Data(string.utf8)))
+        }
+        
+        /// 添加一个文件字段。
+        public mutating func add(name: String, fileData: Data, filename: String, contentType: String) {
+            add(Part(name: name, filename: filename, contentType: contentType, body: fileData))
+        }
+        
+        /// 编码为请求体数据，并返回 `Content-Type` 请求头的值。
+        func encode() -> (data: Data, contentType: String) {
+            let boundary = "PCL.Mac.FormBoundary.\(UUID().uuidString)"
+            var data = Data()
+            for part in parts {
+                data.append(Data("--\(boundary)\r\n".utf8))
+                var disposition = "Content-Disposition: form-data; name=\"\(part.name)\""
+                if let filename = part.filename {
+                    disposition += "; filename=\"\(filename)\""
+                }
+                data.append(Data(disposition.utf8))
+                data.append(Data("\r\n".utf8))
+                if let contentType = part.contentType {
+                    data.append(Data("Content-Type: \(contentType)\r\n".utf8))
+                }
+                data.append(Data("\r\n".utf8))
+                data.append(part.body)
+                data.append(Data("\r\n".utf8))
+            }
+            data.append(Data("--\(boundary)--\r\n".utf8))
+            return (data, "multipart/form-data; boundary=\(boundary)")
+        }
+    }
+    
     public class Response {
         private let response: HTTPURLResponse
         public let statusCode: Int
@@ -178,6 +236,55 @@ public class HTTPClient {
         timeout: TimeInterval = 30
     ) async throws -> Response {
         return try await request(url: url, method: "POST", headers: headers, body: body, using: encodeMethod, throwOnError: throwOnError, revalidate: false, timeout: timeout)
+    }
+    
+    /// 向目标 URL 上传 `multipart/form-data` 数据。
+    /// - Parameters:
+    ///   - url: 目标 URL，可以是 `String` 与 `URL`。
+    ///   - method: 请求方法，如 `POST`、`PUT`。
+    ///   - headers: 请求头。
+    ///   - formData: 上传的表单数据。
+    ///   - throwOnError: 在最终响应状态码为非 `2XX` 时是否抛出错误。
+    ///   - timeout: 请求超时时间，默认 30s。
+    /// - Returns: 返回的响应。
+    public func upload(
+        _ url: URLConvertible,
+        method: String,
+        headers: [String: String?]? = nil,
+        formData: MultipartFormData,
+        throwOnError: Bool = false,
+        timeout: TimeInterval = 30
+    ) async throws -> Response {
+        guard let url = url.url else { throw RequestError.invalidURL(url) }
+        guard let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https"
+        else { throw RequestError.invalidScheme(url: url) }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.timeoutInterval = timeout
+        request.setValue("PCL-Mac/\(Metadata.appVersion)", forHTTPHeaderField: "User-Agent")
+        for (key, value) in headers?.compactMapValues(\.self) ?? [:] {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+        let (bodyData, contentType) = formData.encode()
+        request.httpBody = bodyData
+        request.setValue(contentType, forHTTPHeaderField: "Content-Type")
+        
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch let error where error.isCancellationError {
+            throw CancellationError()
+        }
+        guard let response = response as? HTTPURLResponse else {
+            throw ResponseError(.invalidType, url: url, response: response)
+        }
+        if throwOnError && !(200..<300).contains(response.statusCode) {
+            throw ResponseError(.badStatus, url: url, response: response)
+        }
+        
+        return Response(data: data, response: response)
     }
     
     private func encode(_ body: [String: Any], using method: EncodeMethod) throws -> (Data, String) {

@@ -18,19 +18,20 @@ class InstalledResourcesViewModel: ObservableObject {
     @Published public var pageCount: Int = 0
     
     public let type: ResourceType
+    public var instance: MinecraftInstance? { _instance }
     public var hasSearchKeyword: Bool { !searchKeyword.isEmpty }
     private var cancellables: Set<AnyCancellable> = []
     private var loadResult: [(URL, Resource)]?
     private var convertTask: Task<Void, Never>?
     private var searchKeyword: String = ""
-    private let instance: MinecraftInstance?
+    private let _instance: MinecraftInstance?
     private let id: String
     private let entriesPerPage: Int = 20
     
     private let service: ResourceLoadService
     
     init(instanceManager: InstanceManager, id: String, type: ResourceType) {
-        self.instance = instanceManager.currentRepository.instance(named: id)
+        self._instance = instanceManager.currentRepository.instance(named: id)
         self.id = id
         self.type = type
         self.currentRepositoryId = instanceManager.currentRepositoryId
@@ -147,13 +148,23 @@ class InstalledResourcesViewModel: ObservableObject {
     }
     
     func directory() -> URL? {
-        guard let instance else { return nil }
+        guard let _instance else { return nil }
         
         let directoryName = type.saveDirectory ?? ""
-        let url = instance.url.appending(path: directoryName)
+        let url = _instance.url.appending(path: directoryName)
         
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         
         return url
+    }
+    
+    /// 一键更新实例中所有 Mod。
+    func updateAllMods() {
+        guard type == .mod, let _instance, let loadResult else { return }
+        ModUpdateService.requestUpdate(for: _instance, resources: loadResult) { [weak self] in
+            Task {
+                try? await self?.load(resetPage: false)
+            }
+        }
     }
 }

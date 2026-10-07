@@ -50,6 +50,11 @@ public class YggdrasilAccount: Account {
         return try await service.validateToken(accessToken, clientToken: clientToken) == false
     }
     
+    /// 重新获取带有角色属性的完整档案（用于更换皮肤后刷新）。
+    public func reloadProfile() async throws {
+        self.profile = try await service.fullProfile(for: profile.id)
+    }
+    
     public func fetchMetadata() async throws -> String {
         let metadata = try await service.fetchMetadata().encoded
         self.cachedMetadata = metadata

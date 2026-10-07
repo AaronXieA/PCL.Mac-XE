@@ -168,6 +168,35 @@ public class YggdrasilService {
         }
     }
     
+    /// 上传皮肤。
+    ///
+    /// 参见 [Yggdrasil 服务端技术规范#上传、删除皮肤](https://github.com/yushijinhun/authlib-injector/wiki/Yggdrasil-服务端技术规范#上传删除皮肤)
+    /// - Parameters:
+    ///   - data: 皮肤 PNG 文件的数据。
+    ///   - variant: 皮肤模型（经典 / 苗条）。
+    ///   - uuid: 角色的 `UUID`。
+    ///   - accessToken: 令牌的 `accessToken`。
+    public func uploadSkin(
+        _ data: Data,
+        variant: SkinVariant,
+        for uuid: UUID,
+        accessToken: String
+    ) async throws {
+        let uuidString = UUIDUtils.string(of: uuid, withHyphens: false)
+        var formData: HTTPClient.MultipartFormData = .init()
+        if variant == .slim {
+            formData.add(name: "model", string: "slim")
+        }
+        formData.add(name: "file", fileData: data, filename: "skin.png", contentType: "image/png")
+        _ = try await HTTPClient.shared.upload(
+            authServerURL.appending(path: "/sessionserver/session/minecraft/profile/\(uuidString)/skins"),
+            method: "PUT",
+            headers: ["Authorization": "Bearer \(accessToken)"],
+            formData: formData,
+            throwOnError: true
+        )
+    }
+    
     public enum Error: LocalizedError {
         case apiError(error: String, errorMessage: String, cause: String?)
         case internalError(description: String)

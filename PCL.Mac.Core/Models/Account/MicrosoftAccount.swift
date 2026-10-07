@@ -38,4 +38,10 @@ public class MicrosoftAccount: Account {
     public func shouldRefresh() -> Bool {
         return Date.now.timeIntervalSince(lastRefresh) >= 86400
     }
+    
+    /// 重新获取带有角色属性的完整档案（用于更换皮肤 / 披风后刷新）。
+    public func reloadProfile() async throws {
+        let service: MinecraftProfileService = .init(accessToken: accessToken)
+        self.profile = try await service.fetchSessionProfile(for: profile.id)
+    }
 }
