@@ -41,19 +41,19 @@ jobs:
         run: |
           ditto -x -k ./artifact/PCL.Mac-artifact.zip ./artifact
           
-          ditto -c -k --sequesterRsrc --keepParent ./artifact/PCL.Mac.app ./PCL.Mac.zip
+          ditto -c -k --sequesterRsrc --keepParent "./artifact/PCL.Mac XE.app" ./PCL.Mac.zip
           xcrun notarytool submit "./PCL.Mac.zip" \
             --apple-id "${{ secrets.MACOS_NOTARY_APPLE_ID }}" \
             --password "${{ secrets.MACOS_NOTARY_PASSWORD }}" \
             --team-id "${{ secrets.MACOS_SIGNING_TEAM }}" \
             --wait
-          xcrun stapler staple "./artifact/PCL.Mac.app"
+          xcrun stapler staple "./artifact/PCL.Mac XE.app"
       
       - name: Create DMG
         run: |
           mkdir dmg_temp
 
-          ditto ./artifact/PCL.Mac.app dmg_temp/PCL.Mac.app
+          ditto "./artifact/PCL.Mac XE.app" "dmg_temp/PCL.Mac XE.app"
           ditto Packaging/DS_Store dmg_temp/.DS_Store
           ln -s /Applications "dmg_temp/将左边的 App 拖至此处"
           mkdir -p dmg_temp/.background
@@ -63,7 +63,7 @@ jobs:
       
       - name: Process artifact
         run: |
-          ditto -c -k --sequesterRsrc --keepParent ./artifact/PCL.Mac.app "./PCL.Mac-${{ env.TAG_NAME }}.zip"
+          ditto -c -k --sequesterRsrc --keepParent "./artifact/PCL.Mac XE.app" "./PCL.Mac-${{ env.TAG_NAME }}.zip"
           ditto -c -k --sequesterRsrc --keepParent ./artifact/build.xcarchive ./build.xcarchive.zip
       
       - name: Create release

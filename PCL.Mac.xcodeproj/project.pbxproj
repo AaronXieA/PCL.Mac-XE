@@ -54,7 +54,7 @@
 		EC71A32D2EC034AA006E496F /* PCL.Mac.Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PCL.Mac.Tests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EC996B3C2EBEE80F0094E524 /* Core.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Core.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		ECA78B8D2F67524900F5B097 /* PCL.Mac.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = PCL.Mac.xctestplan; path = Configs/PCL.Mac.xctestplan; sourceTree = "<group>"; };
-		ECC26BC32EBEDD67002B7E3E /* PCL.Mac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PCL.Mac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		ECC26BC32EBEDD67002B7E3E /* PCL.Mac XE.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "PCL.Mac XE.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -186,7 +186,7 @@
 		ECC26BC42EBEDD67002B7E3E /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				ECC26BC32EBEDD67002B7E3E /* PCL.Mac.app */,
+				ECC26BC32EBEDD67002B7E3E /* PCL.Mac XE.app */,
 				EC996B3C2EBEE80F0094E524 /* Core.framework */,
 				EC71A32D2EC034AA006E496F /* PCL.Mac.Tests.xctest */,
 			);
@@ -284,7 +284,7 @@
 				ECA694212F52FB6E00F3DEDC /* SwiftScaffolding */,
 			);
 			productName = PCL.Mac;
-			productReference = ECC26BC32EBEDD67002B7E3E /* PCL.Mac.app */;
+			productReference = ECC26BC32EBEDD67002B7E3E /* PCL.Mac XE.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -417,7 +417,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PCL.Mac.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PCL.Mac";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PCL.Mac XE.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PCL.Mac XE";
 			};
 			name = Debug;
 		};
@@ -436,7 +436,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PCL.Mac.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PCL.Mac";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PCL.Mac XE.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PCL.Mac XE";
 			};
 			name = Release;
 		};
@@ -651,8 +651,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PCL.Mac/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "PCL.Mac-XE";
-                            INFOPLIST_KEY_CFBundleName = "PCL.Mac-XE";
+				INFOPLIST_KEY_CFBundleDisplayName = "PCL.Mac XE";
+                            INFOPLIST_KEY_CFBundleName = "PCL.Mac XE";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Minecraft 正在请求访问麦克风。";
@@ -663,7 +663,7 @@
 				LOCALIZED_STRING_SWIFTUI_SUPPORT = NO;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.ceciliastudio.PCL-Mac";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "PCL.Mac XE";
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -684,8 +684,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PCL.Mac/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "PCL.Mac-XE";
-                            INFOPLIST_KEY_CFBundleName = "PCL.Mac-XE";
+				INFOPLIST_KEY_CFBundleDisplayName = "PCL.Mac XE";
+                            INFOPLIST_KEY_CFBundleName = "PCL.Mac XE";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Minecraft 正在请求访问麦克风。";
@@ -696,7 +696,7 @@
 				LOCALIZED_STRING_SWIFTUI_SUPPORT = NO;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.ceciliastudio.PCL-Mac";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "PCL.Mac XE";
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;

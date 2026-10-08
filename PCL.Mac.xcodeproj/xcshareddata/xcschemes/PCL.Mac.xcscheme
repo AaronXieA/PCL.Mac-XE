@@ -16,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "ECC26BC22EBEDD67002B7E3E"
-               BuildableName = "PCL.Mac.app"
+               BuildableName = "PCL.Mac XE.app"
                BlueprintName = "PCL.Mac"
                ReferencedContainer = "container:PCL.Mac.xcodeproj">
             </BuildableReference>
@@ -63,7 +63,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "ECC26BC22EBEDD67002B7E3E"
-            BuildableName = "PCL.Mac.app"
+            BuildableName = "PCL.Mac XE.app"
             BlueprintName = "PCL.Mac"
             ReferencedContainer = "container:PCL.Mac.xcodeproj">
          </BuildableReference>
@@ -80,7 +80,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "ECC26BC22EBEDD67002B7E3E"
-            BuildableName = "PCL.Mac.app"
+            BuildableName = "PCL.Mac XE.app"
             BlueprintName = "PCL.Mac"
             ReferencedContainer = "container:PCL.Mac.xcodeproj">
          </BuildableReference>

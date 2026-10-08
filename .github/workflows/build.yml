@@ -86,7 +86,7 @@ jobs:
       - name: Prepare app artifact
         run: |
           mkdir "PCL.Mac-artifact"
-          ditto ./build.xcarchive/Products/Applications/PCL.Mac.app ./PCL.Mac-artifact/PCL.Mac.app
+          ditto "./build.xcarchive/Products/Applications/PCL.Mac XE.app" "./PCL.Mac-artifact/PCL.Mac XE.app"
           ditto ./build.xcarchive ./PCL.Mac-artifact/build.xcarchive
           ditto -c -k --sequesterRsrc ./PCL.Mac-artifact ./PCL.Mac-artifact.zip
 

@@ -35,14 +35,14 @@ class UpdateManager {
         defer { try? FileManager.default.removeItem(at: destination) }
         try await FileDownloader.shared.download(downloadItem)
         try FileManager.default.unzipItem(at: destination, to: destination.deletingLastPathComponent())
-        let newBundle: URL = URLConstants.tempURL.appending(path: "PCL.Mac.app")
+        let newBundle: URL = URLConstants.tempURL.appending(path: "PCL.Mac XE.app")
         if !FileManager.default.fileExists(atPath: newBundle.path) {
             throw SimpleError("更新包格式错误，请手动安装更新。")
         }
         _ = try FileManager.default.replaceItemAt(
             Bundle.main.bundleURL,
             withItemAt: newBundle,
-            backupItemName: "PCL.Mac.app.backup",
+            backupItemName: "PCL.Mac XE.app.backup",
             options: [.usingNewMetadataOnly]
         )
         
