@@ -7,26 +7,39 @@
 
 import SwiftUI
 import Core
+import UniformTypeIdentifiers
 
 struct InstanceConfigPage: View {
     @StateObject private var viewModel: InstanceConfigViewModel
     @StateObject private var instanceVM: InstanceViewModel
     @StateObject private var loadingVM: MyLoadingViewModel = .init(text: "加载中")
-    
+    @State private var iconRefreshId: Int = 0
+
     init(instanceManager: InstanceManager, id: String) {
         self._viewModel = .init(wrappedValue: .init(instanceManager: instanceManager, id: id))
         self._instanceVM = .init(wrappedValue: InstanceViewModel(instanceManager: instanceManager))
     }
-    
+
     var body: some View {
         CardContainer {
             MyCard(nil, padding: 10) {
-                MyListItem(.init(image: viewModel.icon, name: viewModel.instance.name, description: viewModel.description))
+                MyListItem<AnyView>(
+                    .init(
+                        image: viewModel.icon.map { .nsImage($0) },
+                        name: viewModel.instance.name,
+                        description: viewModel.description
+                    )
+                )
+                .id(iconRefreshId)
             }
             MyCard(nil) {
                 HStack {
                     MyButton("打开实例目录") {
                         NSWorkspace.shared.open(viewModel.instance.url)
+                    }
+                    .frame(width: 120)
+                    MyButton("更改图标") {
+                        requestChangeIcon()
                     }
                     .frame(width: 120)
                     MyButton("删除实例", type: .red) {
@@ -122,5 +135,70 @@ struct InstanceConfigPage: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 6)
+    }
+
+    /// 弹出图标选择器：支持恢复默认、内置预设、或上传自定义图片。
+    private func requestChangeIcon() {
+        let instance = viewModel.instance
+        let presets = InstanceIcon.presetList
+
+        var items: [ListItem] = []
+        // 恢复默认
+        items.append(
+            .init(
+                image: InstanceIcon.defaultImage(for: instance).map { .nsImage($0) },
+                name: "默认",
+                description: "按 ModLoader 显示 Fabric / Forge / NeoForge 或草方块"
+            )
+        )
+        // 预设
+        for preset in presets {
+            items.append(
+                .init(
+                    image: preset.image.map { .nsImage($0) },
+                    name: preset.name,
+                    description: nil
+                )
+            )
+        }
+        // 自定义上传
+        items.append(
+            .init(
+                image: .system("photo.badge.plus"),
+                name: "自定义上传…",
+                description: "选择一张 PNG 图片作为实例图标"
+            )
+        )
+
+        MessageBoxManager.shared.showList(title: "选择实例图标", items: items) { selected in
+            guard let index = selected else { return }
+            let presetCount = presets.count
+
+            if index == 0 {
+                InstanceIcon.resetIcon(of: instance)
+            } else if index <= presetCount {
+                InstanceIcon.setPreset(presets[index - 1].id, for: instance)
+            } else {
+                // 上传自定义图片
+                let panel = NSOpenPanel()
+                panel.allowsMultipleSelection = false
+                panel.canChooseFiles = true
+                panel.canChooseDirectories = false
+                panel.allowedContentTypes = [UTType.png, UTType.jpeg, UTType.image]
+                panel.prompt = "选择图标"
+                panel.message = "请选择一张图片作为实例图标（建议 PNG，256×256）"
+
+                guard panel.runModal() == .OK, let url = panel.url else { return }
+                do {
+                    try InstanceIcon.saveCustomIcon(to: instance, from: url)
+                } catch {
+                    hint("设置图标失败：\(error.localizedDescription)", type: .critical)
+                    return
+                }
+            }
+
+            iconRefreshId += 1
+            hint("图标已更新！", type: .finish)
+        }
     }
 }

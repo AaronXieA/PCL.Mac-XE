@@ -123,21 +123,23 @@ struct InstanceListPage: View {
 }
 
 private struct InstanceView: View {
+    private let instance: MinecraftInstance
     private let name: String
     private let version: MinecraftVersion
-    private let icon: ImageResource
-    
+
     init(instance: MinecraftInstance) {
+        self.instance = instance
         self.name = instance.name
         self.version = instance.version
-        if let modLoader = instance.modLoader {
-            self.icon = modLoader.icon
-        } else {
-            self.icon = .iconGrassBlock
-        }
     }
-    
+
     var body: some View {
-        MyListItem(.init(image: icon, name: name, description: version.id))
+        MyListItem<AnyView>(
+            .init(
+                image: InstanceIcon.nsImage(for: instance).map { .nsImage($0) },
+                name: name,
+                description: version.id
+            )
+        )
     }
 }

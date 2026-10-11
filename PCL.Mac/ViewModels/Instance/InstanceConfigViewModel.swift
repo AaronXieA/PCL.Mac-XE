@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import AppKit
 import Core
 
 @MainActor
@@ -22,11 +23,8 @@ class InstanceConfigViewModel: ObservableObject {
         return instance.version.description
     }
     
-    public var icon: ImageResource {
-        if let modLoader: ModLoader = instance.modLoader {
-            return modLoader.icon
-        }
-        return .iconGrassBlock
+    public var icon: NSImage? {
+        InstanceIcon.nsImage(for: instance)
     }
     
     public let id: String

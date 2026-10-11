@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import AppKit
 
 public class MinecraftInstance: Hashable, Identifiable, Equatable {
     public let id: UUID
@@ -18,8 +19,18 @@ public class MinecraftInstance: Hashable, Identifiable, Equatable {
     
     public var dirty: Bool
     
+    /// 图标元数据修订号：图标变更时自增以驱动 SwiftUI 刷新。
+    @Published public var iconRevision: Int = 0
+    
     public var name: String { url.lastPathComponent }
     public var manifestURL: URL { url.appending(path: "\(name).json") }
+    /// 实例目录内的自定义图标文件。
+    public var customIconURL: URL { url.appending(path: "PCL-icon.png") }
+    /// 元数据中保存的图标标识（预设名或 "custom"）。
+    public var iconName: String? {
+        get { config.icon }
+        set { config.icon = newValue; markDirty() }
+    }
     
     public init(id: UUID, url: URL, version: MinecraftVersion, modLoader: ModLoader?, manifest: ClientManifest, config: Config, dirty: Bool = false) {
         self.id = id
@@ -46,13 +57,15 @@ public class MinecraftInstance: Hashable, Identifiable, Equatable {
         public var jvmHeapSize: UInt64
         public var javaURL: URL?
         public var jvmArguments: [String]
+        public var icon: String?
 
         public static let `default`: Config = .init(jvmHeapSize: 4096, javaURL: nil)
 
-        public init(jvmHeapSize: UInt64, javaURL: URL?, jvmArguments: [String] = []) {
+        public init(jvmHeapSize: UInt64, javaURL: URL?, jvmArguments: [String] = [], icon: String? = nil) {
             self.jvmHeapSize = jvmHeapSize
             self.javaURL = javaURL
             self.jvmArguments = jvmArguments
+            self.icon = icon
         }
 
         public init(from decoder: any Decoder) throws {
@@ -60,6 +73,7 @@ public class MinecraftInstance: Hashable, Identifiable, Equatable {
             self.jvmHeapSize = try container.decode(UInt64.self, forKey: .jvmHeapSize)
             self.javaURL = try container.decodeIfPresent(URL.self, forKey: .javaURL)
             self.jvmArguments = try container.decodeIfPresent([String].self, forKey: .jvmArguments) ?? []
+            self.icon = try container.decodeIfPresent(String.self, forKey: .icon)
         }
     }
 }
