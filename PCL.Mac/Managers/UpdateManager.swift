@@ -11,22 +11,45 @@ import Core
 import ZIPFoundation
 
 class UpdateManager {
-    public static let shared: UpdateManager = .init(URL(string: "https://xrst.uk/api/launcher/update")!)
-    
+    public static let shared: UpdateManager = .init(URL(string: "https://api.github.com/repos/AaronXieA/PCL.Mac-XE/releases/latest")!)
+
     private let updateMetadataURL: URL
-    
+
     private init(_ updateMetadataURL: URL) {
         self.updateMetadataURL = updateMetadataURL
     }
-    
+
     public func checkUpdates() async throws -> UpdateModel.Version? {
         if Metadata.debugMode || Metadata.bundleVersion == 0 { return nil }
-        let model: UpdateModel = try await HTTPClient.shared.get(updateMetadataURL, revalidate: true).decode(UpdateModel.self)
-        return Metadata.bundleVersion >= model.latestVersion.bundleVersion ? nil : model.latestVersion
+        let release: GitHubRelease = try await HTTPClient.shared.get(updateMetadataURL, revalidate: true).decode(GitHubRelease.self)
+        let latestVersion: String = release.tagName.hasPrefix("v") ? String(release.tagName.dropFirst()) : release.tagName
+        guard isNewer(latestVersion, than: Metadata.appVersion) else { return nil }
+        guard let asset = release.assets.first(where: { $0.name.hasSuffix(".zip") }) else {
+            throw SimpleError("最新 Release 中没有可用的更新包")
+        }
+        return UpdateModel.Version(
+            name: latestVersion,
+            bundleVersion: 0,
+            summary: release.body,
+            updateLogLinks: [.init(name: "GitHub 更新日志", url: release.htmlURL)],
+            downloads: .init(github: asset.browserDownloadURL, mirror: asset.browserDownloadURL, size: asset.size, sha1: nil)
+        )
     }
-    
+
+    /// 语义化版本号比较：remote 比 local 新时返回 true
+    private func isNewer(_ remote: String, than local: String) -> Bool {
+        let remoteParts = remote.split(separator: ".").compactMap { Int($0) }
+        let localParts = local.split(separator: ".").compactMap { Int($0) }
+        for i in 0..<max(remoteParts.count, localParts.count) {
+            let remoteValue = i < remoteParts.count ? remoteParts[i] : 0
+            let localValue = i < localParts.count ? localParts[i] : 0
+            if remoteValue != localValue { return remoteValue > localValue }
+        }
+        return false
+    }
+
     public func installUpdate(_ version: UpdateModel.Version, useMirror: Bool = true) async throws {
-        let destination: URL = URLConstants.tempURL.appending(path: "launcher-update-\(version.bundleVersion)")
+        let destination: URL = URLConstants.tempURL.appending(path: "launcher-update-\(version.name)")
         let downloadItem: DownloadItem = .init(
             url: useMirror ? version.downloads.mirror : version.downloads.github,
             destination: destination,
