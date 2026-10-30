@@ -17,12 +17,8 @@ class ModpackViewModel: ObservableObject {
     
     @MainActor
     public func importModpack(at url: URL, repository: MinecraftRepository) async {
-        guard let curseforgeApiKey = Secrets.shared.curseforgeApiKey else {
-            hint("缺少 CurseForge API Key，无法开始整合包导入，请尝试从官方渠道重新下载 PCL.Mac XE！", type: .critical)
-            return
-        }
-        
-        let service = ModpackImportService(curseforgeClient: .init(apiKey: curseforgeApiKey), modpackURL: url)
+        let curseforgeClient: CurseForgeAPIClient? = Secrets.shared.curseforgeApiKey.map { .init(apiKey: $0) }
+        let service = ModpackImportService(curseforgeClient: curseforgeClient, modpackURL: url)
         
         let handleUnknownError: (Error) -> Void = { (error: Error) in
             MessageBoxManager.shared.showText(
@@ -81,6 +77,8 @@ class ModpackViewModel: ObservableObject {
                     content: "很抱歉，PCL.Mac XE 目前只支持导入 Modrinth、CurseForge、MCBBS 和普通压缩包格式的整合包，不支持这个整合包使用的格式……",
                     level: .error
                 )
+            case .missingCurseforgeClient:
+                hint("缺少 CurseForge API Key，无法导入 CurseForge / MCBBS 整合包，请尝试从官方渠道重新下载 PCL.Mac XE！", type: .critical)
             default:
                 handleUnknownError(error)
             }
