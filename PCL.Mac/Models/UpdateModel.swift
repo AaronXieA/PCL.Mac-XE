@@ -46,7 +46,7 @@ struct GitHubRelease: Codable {
     }
 
     public let tagName: String
-    public let body: String
+    public let body: String?
     public let htmlURL: URL
     public let assets: [Asset]
 

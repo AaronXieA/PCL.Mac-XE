@@ -30,7 +30,7 @@ class UpdateManager {
         return UpdateModel.Version(
             name: latestVersion,
             bundleVersion: 0,
-            summary: release.body,
+            summary: release.body ?? "",
             updateLogLinks: [.init(name: "GitHub 更新日志", url: release.htmlURL)],
             downloads: .init(github: asset.browserDownloadURL, mirror: asset.browserDownloadURL, size: asset.size, sha1: nil)
         )
