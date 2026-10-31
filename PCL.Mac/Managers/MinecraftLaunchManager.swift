@@ -19,9 +19,12 @@ class MinecraftLaunchManager: ObservableObject {
     @Published public var currentStage: String? = nil
     @Published public var instanceName: String?
     @Published public var gameProcess: Process?
-    public var isRunning: Bool { gameProcess != nil }
+    @Published public private(set) var isRunning: Bool = false
+    /// 游戏多开是否已开启。每次启动后会重置为 false。
+    @Published public var isMultiLaunchEnabled: Bool = false
     public let loadingViewModel: MyLoadingViewModel = .init(text: "正在启动游戏")
     
+    private var runningProcesses: [Process] = []
     private var task: MyTask<MinecraftLaunchTask.Model>? {
         didSet {
             isLaunching = task != nil
@@ -42,9 +45,16 @@ class MinecraftLaunchManager: ObservableObject {
         in repository: MinecraftRepository
     ) {
         if isLaunching { return }
+        if isRunning && !isMultiLaunchEnabled { return }
+        if isMultiLaunchEnabled {
+            // 每次启动后自动关闭多开
+            isMultiLaunchEnabled = false
+        }
         self.loadingViewModel.text = "正在启动游戏"
         let task: MyTask<MinecraftLaunchTask.Model> = MinecraftLaunchTask.create(for: instance, using: account, in: repository) { launcher, process in
             self.gameProcess = process
+            self.runningProcesses.append(process)
+            self.isRunning = true
             process.terminationHandler = { [weak self] process in
                 log("游戏进程已退出，退出代码：\(process.terminationStatus)")
                 if ![0, 9, 15, 128 + 9, 128 + 15].contains(process.terminationStatus) {
@@ -54,8 +64,11 @@ class MinecraftLaunchManager: ObservableObject {
                     try? FileManager.default.removeItem(at: launcher.logURL)
                 }
                 DispatchQueue.main.async {
-                    self?.cancel()
-                    self?.gameProcess = nil
+                    self?.runningProcesses.removeAll { $0 === process }
+                    self?.isRunning = !(self?.runningProcesses.isEmpty ?? true)
+                    if self?.gameProcess === process {
+                        self?.gameProcess = nil
+                    }
                 }
             }
             self.loadingViewModel.text = "已启动游戏"

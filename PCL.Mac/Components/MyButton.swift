@@ -78,7 +78,7 @@ struct MyButton: View {
     }
     
     enum `Type` {
-        case normal, highlight, red, black
+        case normal, highlight, red, black, orange
         
         var color: Color {
             switch self {
@@ -86,6 +86,7 @@ struct MyButton: View {
             case .highlight: .color2
             case .red: Color(0xCE2111)
             case .black: .black
+            case .orange: Color(0xE77B19)
             }
         }
         
@@ -95,6 +96,7 @@ struct MyButton: View {
             case .highlight: .color3
             case .red: Color(0xFF4C4C)
             case .black: Color(0x404040)
+            case .orange: Color(0xF59238)
             }
         }
     }

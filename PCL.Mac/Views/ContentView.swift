@@ -170,10 +170,18 @@ private struct ExtraButtonsOverlay: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            ExtraButton(.iconDownloadPage, showTasksButton) {
+            ExtraButton(.resource(.iconDownloadPage), showTasksButton) {
                 router.append(.tasks)
             }
-            ExtraButton(.iconPower, launchManager.isRunning) {
+            ExtraButton(.system("gamecontroller.fill"), launchManager.isRunning) {
+                launchManager.isMultiLaunchEnabled.toggle()
+                if launchManager.isMultiLaunchEnabled {
+                    hint("游戏多开已开启！", type: .finish)
+                } else {
+                    hint("游戏多开已关闭！", type: .info)
+                }
+            }
+            ExtraButton(.resource(.iconPower), launchManager.isRunning) {
                 launchManager.stop()
                 if launchManager.isLaunching {
                     hint("已取消启动！", type: .finish)
@@ -195,11 +203,16 @@ private struct ExtraButtonsOverlay: View {
     private struct ExtraButton: View {
         @State private var hovered: Bool = false
         @State private var pressed: Bool = false
-        private let icon: ImageResource
+        private let icon: Icon
         private let show: Bool
         private let onClick: () -> Void
         
-        init(_ icon: ImageResource, _ show: Bool, onClick: @escaping () -> Void) {
+        enum Icon {
+            case resource(ImageResource)
+            case system(String)
+        }
+        
+        init(_ icon: Icon, _ show: Bool, onClick: @escaping () -> Void) {
             self.icon = icon
             self.show = show
             self.onClick = onClick
@@ -210,11 +223,20 @@ private struct ExtraButtonsOverlay: View {
                 .fill(hovered ? Color.color4 : .color3)
                 .frame(width: show ? 40 : 1)
                 .overlay {
-                    Image(icon)
-                        .resizable()
-                        .scaledToFit()
-                        .padding(10)
-                        .foregroundStyle(Color.color8)
+                    Group {
+                        switch icon {
+                        case .resource(let resource):
+                            Image(resource)
+                                .resizable()
+                                .scaledToFit()
+                        case .system(let name):
+                            Image(systemName: name)
+                                .resizable()
+                                .scaledToFit()
+                        }
+                    }
+                    .padding(10)
+                    .foregroundStyle(Color.color8)
                 }
                 .gesture(
                     DragGesture(minimumDistance: 0)

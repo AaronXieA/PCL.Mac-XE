@@ -6,284 +6,76 @@
 //
 
 import SwiftUI
-import SwiftScaffolding
 import Core
 
 struct MultiplayerPage: View {
-    @EnvironmentObject private var viewModel: MultiplayerViewModel
-    @StateObject private var loadingViewModel: MyLoadingViewModel = .init(text: "创建房间中")
-    @State private var isEasyTierInstalled: Bool = true
-    
-    private static let dateFormatter: DateFormatter = {
-        let formatter: DateFormatter = .init()
-        formatter.dateFormat = "yyyy/MM/dd HH:mm"
-        return formatter
-    }()
-    
     var body: some View {
         CardContainer {
-            switch viewModel.state {
-            case .ready:
-                if let status: CLAPIClient.EasyTierStatus = viewModel.easyTierStatus,
-                   case .unavailable(let message, let date) = status {
-                    MyTip(text: "联机功能不可用：\(message)\n状态更新日期：\(Self.dateFormatter.string(from: date))", theme: .red)
-                }
-                if isEasyTierInstalled {
-                    readyBody
-                } else {
-                    installEasyTierBody
-                }
-            case .creatingRoom, .joiningRoom:
-                MyLoading(viewModel: loadingViewModel)
-            case .hostReady, .memberReady:
-                multiplayerReadyView
-            }
-        }
-        .onAppear {
-            isEasyTierInstalled = EasyTierManager.shared.isInstalled()
-            if viewModel.state == .creatingRoom {
-                loadingViewModel.text = "创建房间中"
-            } else if viewModel.state == .joiningRoom {
-                loadingViewModel.text = "加入房间中"
-            }
-        }
-        .task {
-            if viewModel.easyTierStatus == nil {
-                do {
-                    _ = try await viewModel.fetchEasyTierStatus()
-                } catch {
-                    err("获取 EasyTier 状态失败：\(error.localizedDescription)")
-                }
-            }
-        }
-        .onChange(of: viewModel.state) { newValue in
-            if newValue == .creatingRoom {
-                loadingViewModel.text = "创建房间中"
-            } else if newValue == .joiningRoom {
-                loadingViewModel.text = "加入房间中"
+            MyCard(nil, foldable: false, padding: 24) {
+                MarkdownView(Self.document)
             }
         }
     }
-    
-    private var installEasyTierBody: some View {
-        MyCard("安装 EasyTier", foldable: false) {
-            MyListItem(.init(image: .iconDownloadPage, imageSize: 28, name: "安装 EasyTier", description: "联机功能使用 EasyTier 实现，所以你需要先安装 EasyTier 才能进行联机！"))
-                .onTapGesture {
-                    Task {
-                        try await checkDisclaimer()
-                        let task: MyTask = EasyTierManager.shared.makeInstallTask()
-                        await MainActor.run {
-                            TaskManager.shared.execute(task: task)
-                            AppRouter.shared.append(.tasks)
-                        }
-                    }
-                }
-        }
-    }
-    
-    private var readyBody: some View {
-        MyCard("开始联机", foldable: false) {
-            VStack(spacing: 0) {
-                MyListItem(.init(image: .iconMultiplayerPage, imageSize: 28, name: "创建房间", description: "使用局域网世界创建房间，并邀请好友加入！"))
-                    .onTapGesture {
-                        Task {
-                            if EasyTierManager.shared.hintInstall() {
-                                return
-                            }
-                            try await checkDisclaimer()
-                            guard await MessageBoxManager.shared.showTextAsync(
-                                title: "开启房间",
-                                content: "请按照以下步骤操作：\n   1. 进入世界，按下 ESC\n    2. 点击 “对局域网开放” > “创建局域网世界”\n    3. 回到启动器，点击 “确定” 并输入聊天栏中的端口号",
-                                .no(),
-                                .yes(type: .highlight)
-                            ) == 1 else { return }
-                            guard let rawPort: String = await MessageBoxManager.shared.showInputAsync(title: "输入端口号") else {
-                                return
-                            }
-                            guard let port: UInt16 = .init(rawPort), await Scaffolding.checkMinecraftServer(on: port, timeout: 1) else {
-                                hint("无效的端口号！", type: .critical)
-                                return
-                            }
-                            viewModel.startHost(serverPort: port)
-                        }
-                    }
-                MyListItem(.init(image: .iconAdd, imageSize: 28, name: "加入房间", description: "通过房主分享的房间码，加入游戏世界！"))
-                    .onTapGesture {
-                        Task {
-                            if EasyTierManager.shared.hintInstall() {
-                                return
-                            }
-                            try await checkDisclaimer()
-                            if let type: AccountType = AccountViewModel().currentAccount?.type,
-                               type == .offline {
-                                guard await MessageBoxManager.shared.showTextAsync(
-                                    title: "警告",
-                                    content: "你正在使用离线账号，可能会导致无法加入游戏！\n如果房主安装了 LAN Server Properties 等模组，可以忽略此警告。\n如果你拥有正版账号，请返回主页面并切换为正版账号。\n\n如果出现了“无效会话”等错误，请不要反馈给他人！",
-                                    level: .error,
-                                    .no(),
-                                    .yes(label: "继续", type: .red)
-                                ) == 1 else { return }
-                            }
-                            
-                            if let roomCode: String = await MessageBoxManager.shared.showInputAsync(title: "输入房间码", placeholder: "U/XXXX-XXXX-XXXX-XXXX") {
-                                if RoomCode.isValid(code: roomCode) {
-                                    viewModel.join(roomCode: roomCode)
-                                } else {
-                                    hint("错误的邀请码格式！", type: .critical)
-                                }
-                            }
-                        }
-                    }
-                MyListItem(.init(image: .iconAbout, imageSize: 28, name: "帮助文档", description: "点击这里可以查看联机教程！"))
-                    .onTapGesture {
-                        NSWorkspace.shared.open(URL(string: "https://cylorine.studio/helps/PCL.Mac#multiplayer")!)
-                    }
-            }
-        }
-    }
-    
-    @ViewBuilder
-    private var multiplayerReadyView: some View {
-        if let room = viewModel.room {
-            VStack(spacing: 20) {
-                MyCard("提示", foldable: false) {
-                    VStack(alignment: .leading) {
-                        if viewModel.state == .hostReady, let roomCode = viewModel.roomCode() {
-                            MyText("房间码：\(roomCode)（已自动复制）")
-                            MyText("你的好友可以通过这个房间码来加入房间！")
-                        } else {
-                            MyText("本地地址：127.0.0.1:\(room.serverPort)（已自动复制）")
-                            MyText("你可以在游戏中点击 “多人游戏” > “直接连接”，然后输入这个地址来加入游戏！")
-                        }
-                        Spacer()
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                HStack(alignment: .top, spacing: 20) {
-                    MyCard("操作", foldable: false) {
-                        VStack(spacing: 0) {
-                            if viewModel.state == .hostReady, let roomCode = viewModel.roomCode() {
-                                ActionView(.iconCopy, "复制房间码") {
-                                    NSPasteboard.general.clearContents()
-                                    NSPasteboard.general.setString(roomCode, forType: .string)
-                                    hint("复制成功！", type: .finish)
-                                }
-                                ActionView(.iconPower, "关闭房间", color: .red) {
-                                    Task {
-                                        if room.members.count > 1 {
-                                            if await MessageBoxManager.shared.showTextAsync(
-                                                title: "警告",
-                                                content: "你确定要关闭房间吗？\n这会让除了你以外的所有玩家退出游戏！",
-                                                level: .error,
-                                                .yes(type: .red),
-                                                .no()
-                                            ) != 1 { return }
-                                        }
-                                        viewModel.stopHost()
-                                    }
-                                }
-                            } else {
-                                ActionView(.iconCopy, "复制地址") {
-                                    NSPasteboard.general.clearContents()
-                                    NSPasteboard.general.setString("127.0.0.1:\(room.serverPort)", forType: .string)
-                                    hint("复制成功！", type: .finish)
-                                }
-                                ActionView(.iconPower, "退出房间", color: .red) {
-                                    viewModel.leave()
-                                }
-                            }
-                            Spacer()
-                        }
-                        .fixedSize(horizontal: true, vertical: false)
-                        .frame(maxHeight: .infinity)
-                    }
-                    .fixedSize(horizontal: true, vertical: false)
-                    PlayerListView(room: room)
-                        .frame(maxHeight: .infinity)
-                }
-            }
-        }
-    }
-    
-    private func checkDisclaimer() async throws {
-        if await LocaleUtils.isInChinaMainland(strict: false) == false {
-            MessageBoxManager.shared.showText(
-                title: "不支持的地区",
-                content: "PCL.Mac XE 目前只支持中国大陆地区。\n如果您在中国大陆，并使用了 VPN 等工具，请先关闭它们，然后再次尝试！",
-                level: .error
-            )
-            throw SimpleError("不支持的地区")
-        }
-        if LauncherConfig.shared.multiplayerDisclaimerAgreed { return }
-        if await MessageBoxManager.shared.showTextAsync(
-            title: "免责声明",
-            content: "在多人联机过程中，您须严格遵守所在国家和地区的相关法律法规。因违法使用本功能导致的后果将由用户自行承担。\n\n点击“同意”即表示您已阅读并同意上述全部内容。",
-            level: .info,
-            .no(label: "不同意", type: .red),
-            .yes(label: "同意", type: .highlight)
-        ) == 0 {
-            AppRouter.shared.setRoot(.launch)
-            throw SimpleError("用户未同意免责声明")
-        }
-        LauncherConfig.shared.multiplayerDisclaimerAgreed = true
-    }
-}
 
-private struct PlayerListView: View {
-    @ObservedObject private var room: Room
-    
-    init(room: Room) {
-        self.room = room
-    }
-    
-    var body: some View {
-        MyCard("玩家列表", foldable: false) {
-            LazyVStack(spacing: 0) {
-                ForEach(room.members, id: \.machineId) { member in
-                    MyListItem(.init(name: member.name, description: "[\(member.kind.localizedName)] \(member.vendor)"))
-                }
-                Spacer(minLength: 0)
-            }
-        }
-    }
-}
+    private static let document: String = """
+    # 关于 PCL.Mac 内置联机功能失效及替代方案说明
 
-private struct ActionView: View {
-    private let icon: ImageResource
-    private let text: String
-    private let color: Color
-    private let onClick: () -> Void
-    
-    init(_ icon: ImageResource, _ text: String, color: Color = .color1, onClick: @escaping () -> Void) {
-        self.icon = icon
-        self.text = text
-        self.color = color
-        self.onClick = onClick
-    }
-    
-    var body: some View {
-        MyListItem {
-            HStack(spacing: 7) {
-                Image(icon)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 16, height: 16)
-                    .foregroundStyle(color)
-                MyText(text, color: color)
-                Spacer(minLength: 0)
-            }
-            .padding(2)
-        }
-        .frame(height: 27)
-        .onTapGesture(perform: onClick)
-    }
-}
+    各位玩家及社区成员：
 
-extension Member.Kind {
-    var localizedName: String {
-        switch self {
-        case .host: "房主"
-        case .guest: "成员"
-        }
-    }
+    大家好。
+
+    此前，PCL.Mac 内置了 EasyTier 联机，但多半时间都无法使用。于是我们打算正式删除这个板块并改为这篇文档。**原 PCL.Mac 内置的 EasyTier 联机功能已正式失效**，无法继续提供稳定的联机服务。
+
+    为确保各位玩家能够顺畅地体验 Minecraft，现提供以下三种主流且稳定的替代联机方案。请各位根据自己的网络环境、玩家数量及使用习惯选择最合适的方案。
+
+    ---
+
+    ## 方案一：蓝盾联机（LanDrop）
+
+    蓝盾是目前国内较为主流的虚拟局域网联机工具，对 Minecraft 的支持度较好。
+
+    *   **优点**：
+        *   **上手简单**：图形化界面，注册登录后即可创建或加入房间，无需复杂的网络配置。
+        *   **专线优化**：针对国内网络环境进行了优化，通常在跨运营商联机时表现较稳定。
+        *   **功能集成**：部分版本内置了针对 MC 的快捷联机选项，支持大厅匹配。
+    *   **缺点**：
+        *   **高峰期拥挤**：在晚间或周末等玩家在线高峰期，免费节点可能出现延迟升高或掉线情况。
+        *   **限制**：免费用户的房间人数和带宽通常有上限，若需长期稳定或大房间联机，可能需要付费升级。
+
+    ## 方案二：樱花 FRP（Sakura Frp）
+
+    樱花 FRP 是一款基于内网穿透的联机方案，需要服主在本地开启服务端后进行端口映射。
+
+    *   **优点**：
+        *   **高度自由**：只要服主电脑开着并配置好，玩家可以直接通过分配的域名/IP连接，不依赖第三方联机大厅的兼容性。
+        *   **极低延迟**：选择合适的地域节点后，通常能获得极佳的网络延迟，适合对操作手感要求高的生存或小游戏服务器。
+        *   **成本可控**：提供免费隧道额度，且获取稳定节点的门槛相对较低。
+    *   **缺点**：
+        *   **配置门槛高**：服主需要学习如何在樱花后台创建隧道，并将映射端口与服务器配置（`server.properties`）对接。
+        *   **实名认证**：根据国内规定，使用其免费服务通常需要完成实名认证。
+        *   **单点依赖**：服主的电脑或网络一旦断开，整个服务器即刻断联。
+
+    ## 方案三：简幻欢（JHH）
+
+    简幻欢并非纯粹的联机工具，而是一个提供免费开服、挂机面板的云服务社区。
+
+    *   **优点**：
+        *   **解放本地**：服务器全天候在云端运行，服主不需要一直开着电脑，彻底告别“服主下线，服务器宕机”的问题。
+        *   **一站式服务**：自带整合包上传、在线文件管理、备份等基础功能，非常适合长期养老的生存服。
+    *   **缺点**：
+        *   **资源受限**：免费额度提供的 CPU 和内存有限，如果加装较多模组或玩家人数较多，容易出现卡顿。
+        *   **排队与限制**：高峰期可能面临云服务器排队开机或资源限额，导致无法及时进入。
+
+    ---
+
+    ## 总结与建议
+
+    *   如果是**私人好友之间临时联机**，推荐使用 **蓝盾**，最为简单快捷。
+    *   如果是**需要长期开荒、建厂的生存服务器**，推荐有能力的服主使用 **樱花 FRP** 进行穿透。
+    *   如果希望**服务器 24 小时在线且不受限于服主电脑**，可以尝试摸索 **简幻欢** 的免费云服。
+
+    请各位玩家及时调整联机方式，以免影响游戏体验。如有技术疑问，可在群内交流探讨。
+
+    祝大家游戏愉快！
+    """
 }

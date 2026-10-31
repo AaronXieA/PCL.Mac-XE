@@ -12,6 +12,7 @@ import Combine
 class LaunchViewModel: ObservableObject {
     @Published public private(set) var isLaunching: Bool
     @Published public private(set) var isRunning: Bool
+    @Published public private(set) var isMultiLaunchEnabled: Bool
     @Published public private(set) var progress: Double
     @Published public private(set) var currentStage: String?
     @Published public private(set) var instanceName: String?
@@ -25,6 +26,7 @@ class LaunchViewModel: ObservableObject {
         
         self.isLaunching = launchManager.isLaunching
         self.isRunning = launchManager.isRunning
+        self.isMultiLaunchEnabled = launchManager.isMultiLaunchEnabled
         self.progress = launchManager.progress
         self.currentStage = launchManager.currentStage
         self.instanceName = launchManager.instanceName
@@ -34,10 +36,13 @@ class LaunchViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .assign(to: \.isLaunching, on: self)
             .store(in: &cancellables)
-        launchManager.$gameProcess
-            .map { $0 != nil }
+        launchManager.$isRunning
             .receive(on: DispatchQueue.main)
             .assign(to: \.isRunning, on: self)
+            .store(in: &cancellables)
+        launchManager.$isMultiLaunchEnabled
+            .receive(on: DispatchQueue.main)
+            .assign(to: \.isMultiLaunchEnabled, on: self)
             .store(in: &cancellables)
         launchManager.$progress
             .receive(on: DispatchQueue.main)

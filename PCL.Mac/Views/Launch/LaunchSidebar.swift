@@ -93,8 +93,12 @@ struct LaunchSidebar: Sidebar {
                 }
                 Group {
                     if let instance = instanceVM.currentInstance {
-                        MyButton("启动游戏", subLabel: instance.name, type: .highlight) {
-                            guard !launchVM.isRunning && !launchVM.isLaunching else {
+                        MyButton("启动游戏", subLabel: instance.name, type: launchVM.isMultiLaunchEnabled ? .orange : .highlight) {
+                            guard !launchVM.isLaunching else {
+                                hint("游戏正在启动中！", type: .critical)
+                                return
+                            }
+                            guard !launchVM.isRunning || launchVM.isMultiLaunchEnabled else {
                                 hint("已有一个游戏实例正在运行！", type: .critical)
                                 return
                             }

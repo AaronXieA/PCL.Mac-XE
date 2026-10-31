@@ -20,7 +20,7 @@ class UpdateManager {
     }
 
     public func checkUpdates() async throws -> UpdateModel.Version? {
-        if Metadata.debugMode || Metadata.bundleVersion == 0 { return nil }
+        if Metadata.debugMode { return nil }
         let release: GitHubRelease = try await HTTPClient.shared.get(updateMetadataURL, revalidate: true).decode(GitHubRelease.self)
         let latestVersion: String = release.tagName.hasPrefix("v") ? String(release.tagName.dropFirst()) : release.tagName
         guard isNewer(latestVersion, than: Metadata.appVersion) else { return nil }
