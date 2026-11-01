@@ -23,17 +23,25 @@ class UpdateManager {
         if Metadata.debugMode { return nil }
         let release: GitHubRelease = try await HTTPClient.shared.get(updateMetadataURL, revalidate: true).decode(GitHubRelease.self)
         let latestVersion: String = release.tagName.hasPrefix("v") ? String(release.tagName.dropFirst()) : release.tagName
-        guard isNewer(latestVersion, than: Metadata.appVersion) else { return nil }
+        // 与「a.b.c.d」形式对齐：d 为热修复序号，对应 CFBundleVersion
+        guard isNewer(latestVersion, than: "\(Metadata.appVersion).\(Metadata.bundleVersion)") else { return nil }
         guard let asset = release.assets.first(where: { $0.name.hasSuffix(".zip") }) else {
             throw SimpleError("最新 Release 中没有可用的更新包")
         }
         return UpdateModel.Version(
-            name: latestVersion,
+            name: displayName(of: latestVersion),
             bundleVersion: 0,
             summary: release.body ?? "",
             updateLogLinks: [.init(name: "GitHub 更新日志", url: release.htmlURL)],
             downloads: .init(github: asset.browserDownloadURL, mirror: asset.browserDownloadURL, size: asset.size, sha1: nil)
         )
+    }
+    
+    /// 将 `a.b.c.d` 形式的版本号展示为 `a.b.c (d)`。
+    private func displayName(of version: String) -> String {
+        let parts: [Substring] = version.split(separator: ".")
+        guard parts.count == 4 else { return version }
+        return "\(parts[0]).\(parts[1]).\(parts[2]) (\(parts[3]))"
     }
 
     /// 语义化版本号比较：remote 比 local 新时返回 true

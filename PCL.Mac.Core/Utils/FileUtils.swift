@@ -49,6 +49,59 @@ public enum FileUtils {
         try hash(of: url, using: SHA512.self)
     }
     
+    /// 获取 CurseForge 指纹（MurmurHash2 32 位，种子为 1，计算前忽略空白字符）。
+    public static func curseForgeFingerprint(of url: URL) throws -> UInt32 {
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            throw CocoaError(.fileNoSuchFile)
+        }
+        let data: Data = try Data(contentsOf: url)
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(data.count)
+        for byte in data where byte != 0x09 && byte != 0x0A && byte != 0x0D && byte != 0x20 {
+            bytes.append(byte)
+        }
+        return murmur2(bytes, seed: 1)
+    }
+    
+    private static func murmur2(_ bytes: [UInt8], seed: UInt32) -> UInt32 {
+        let m: UInt32 = 0x5bd1e995
+        let r: UInt32 = 24
+        var h: UInt32 = seed ^ UInt32(bytes.count)
+        var i: Int = 0
+        
+        while bytes.count - i >= 4 {
+            var k: UInt32 = UInt32(bytes[i])
+                | (UInt32(bytes[i + 1]) << 8)
+                | (UInt32(bytes[i + 2]) << 16)
+                | (UInt32(bytes[i + 3]) << 24)
+            k = k &* m
+            k ^= k >> r
+            k = k &* m
+            h = h &* m
+            h ^= k
+            i += 4
+        }
+        
+        switch bytes.count - i {
+        case 3:
+            h ^= UInt32(bytes[i + 2]) << 16
+            fallthrough
+        case 2:
+            h ^= UInt32(bytes[i + 1]) << 8
+            fallthrough
+        case 1:
+            h ^= UInt32(bytes[i])
+            h = h &* m
+        default:
+            break
+        }
+        
+        h ^= h >> 13
+        h = h &* m
+        h ^= h >> 15
+        return h
+    }
+    
     public static func checkFile(at url: URL, with checksums: [String: String]) throws -> Bool {
         for (algorithm, value) in checksums {
             let hash: String? = switch algorithm {

@@ -30,6 +30,25 @@ public class CurseForgeAPIClient {
         return try response.decode(Response<CurseForgeModFile>.self).data
     }
     
+    /// 使用 MurmurHash2 指纹批量反查已安装的资源。
+    public func matches(fingerprints: [UInt32], gameId: Int = 432) async throws -> [CurseForgeFingerprintMatch] {
+        let values: [Int] = fingerprints.map { Int(Int32(bitPattern: $0)) }
+        let response = try await request("/v1/fingerprints/\(gameId)", method: "POST", body: ["fingerprints": values])
+        guard response.statusCode == 200 else { return [] }
+        return try response.decode(Response<CurseForgeFingerprintMatches>.self).data.exactMatches
+    }
+    
+    /// 获取某个模组在指定游戏版本与加载器下可用的文件列表。
+    public func files(ofMod modId: Int32, gameVersion: String, modLoader: ModLoader?) async throws -> [CurseForgeModFile] {
+        var body: [String: Any] = ["gameVersion": gameVersion]
+        if let modLoader {
+            body["modLoaderType"] = modLoader.curseForgeType
+        }
+        let response = try await request("/v1/mods/\(modId)/files", body: body)
+        guard response.statusCode == 200 else { return [] }
+        return try response.decode(Response<[CurseForgeModFile]>.self).data
+    }
+    
     private func request(
         _ path: String,
         method: String = "GET",

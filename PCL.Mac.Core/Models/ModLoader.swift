@@ -25,4 +25,13 @@ public enum ModLoader: String, Codable, CustomStringConvertible {
         case .neoforge: "NeoForge"
         }
     }
+    
+    /// CurseForge API 中对应的 modLoaderType 值。
+    public var curseForgeType: Int {
+        switch self {
+        case .forge: 1
+        case .fabric: 4
+        case .neoforge: 6
+        }
+    }
 }

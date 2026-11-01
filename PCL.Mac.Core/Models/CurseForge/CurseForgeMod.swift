@@ -54,6 +54,8 @@ public struct CurseForgeModFile: Codable {
     public let modId: Int32
     public let available: Bool
     public let fileName: String
+    public let displayName: String?
+    public let fileDate: Date?
     public let hashes: [FileHash]
     public let downloadURL: URL
     
@@ -68,7 +70,7 @@ public struct CurseForgeModFile: Codable {
     }
     
     private enum CodingKeys: String, CodingKey {
-        case id, modId, fileName, hashes
+        case id, modId, fileName, displayName, fileDate, hashes
         case available = "isAvailable", downloadURL = "downloadUrl"
     }
     
@@ -77,8 +79,29 @@ public struct CurseForgeModFile: Codable {
         self.id = try container.decode(Int32.self, forKey: .id)
         self.modId = try container.decode(Int32.self, forKey: .modId)
         self.fileName = try container.decode(String.self, forKey: .fileName)
+        self.displayName = try? container.decode(String.self, forKey: .displayName)
+        self.fileDate = (try? container.decode(String.self, forKey: .fileDate)).flatMap(Self.parseDate)
         self.hashes = try container.decode([CurseForgeModFile.FileHash].self, forKey: .hashes)
         self.available = try container.decode(Bool.self, forKey: .available)
         self.downloadURL = try container.decodeIfPresent(URL.self, forKey: .downloadURL) ?? .init(string: "https://edge.forgecdn.net/files/\(id / 1000)/\(id % 1000)/\(fileName)")!
     }
+    
+    private static func parseDate(_ string: String) -> Date? {
+        let formatter: ISO8601DateFormatter = .init()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: string) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: string)
+    }
+}
+
+/// 指纹反查命中的资源。
+public struct CurseForgeFingerprintMatch: Codable {
+    public let id: Int32
+    public let file: CurseForgeModFile
+}
+
+/// 指纹反查接口的返回数据。
+public struct CurseForgeFingerprintMatches: Codable {
+    public let exactMatches: [CurseForgeFingerprintMatch]
 }

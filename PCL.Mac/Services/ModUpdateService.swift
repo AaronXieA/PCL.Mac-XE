@@ -20,10 +20,12 @@ enum ModUpdateService {
     /// 一次更新操作涉及的 Mod 信息。
     private struct UpdateEntry {
         let url: URL
-        let resource: Resource
-        let currentVersion: ModrinthVersion
-        let targetVersion: ModrinthVersion
-        let targetFile: ModrinthVersion.File
+        let name: String
+        let oldVersion: String
+        let newVersion: String
+        let fileName: String
+        let downloadURL: URL
+        let sha1: String?
     }
     
     /// 任务模型，用于在子任务间共享待更新列表。
@@ -69,37 +71,40 @@ enum ModUpdateService {
         }
         
         let model: UpdateModel = .init()
-        let task: MyTask<UpdateModel> = .init(
-            name: "更新 Mod - \(instance.name)",
-            model: model,
-            .init(0, "检查更新", display: false) { subTask, model in
-                let entries: [UpdateEntry] = try await checkUpdates(for: instance, mods: mods)
-                model.entries = entries
-                await subTask.setProgressAsync(1)
-            },
-            .init(1, "下载更新", display: false) { subTask, model in
-                try await downloadUpdates(model.entries, task: subTask)
+        Task { @MainActor in
+            let entries: [UpdateEntry]
+            do {
+                entries = try await checkUpdates(for: instance, mods: mods)
+            } catch {
+                err("检查 Mod 更新失败：\(error.localizedDescription)")
+                return
             }
-        ) { error in
-            if error.isCancellationError { return }
-            err("更新 Mod 失败：\(error.localizedDescription)")
-        }
-        
-        TaskManager.shared.execute(task: task) { error in
-            if error == nil {
-                let items: [ModUpdateItem] = model.entries
-                    .map { entry in
-                        let fileURL: URL = entry.url.pathExtension == "disabled"
-                            ? entry.url.deletingPathExtension()
-                            : entry.url
-                        return ModUpdateItem(
-                            name: entry.resource.name.isEmpty ? fileURL.deletingPathExtension().lastPathComponent : entry.resource.name,
-                            oldVersion: entry.currentVersion.versionNumber,
-                            newVersion: entry.targetVersion.versionNumber
-                        )
-                    }
-                    .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-                completion(items)
+            guard !entries.isEmpty else {
+                hint("所有 Mod 都已是最新版本！", type: .finish)
+                return
+            }
+            model.entries = entries
+            
+            let task: MyTask<UpdateModel> = .init(
+                name: "更新 Mod - \(instance.name)",
+                model: model,
+                .init(0, "下载更新", display: true) { subTask, model in
+                    try await downloadUpdates(model.entries, task: subTask)
+                }
+            ) { error in
+                if error.isCancellationError { return }
+                err("更新 Mod 失败：\(error.localizedDescription)")
+            }
+            
+            TaskManager.shared.execute(task: task) { error in
+                if error == nil {
+                    let items: [ModUpdateItem] = model.entries
+                        .map { entry in
+                            ModUpdateItem(name: entry.name, oldVersion: entry.oldVersion, newVersion: entry.newVersion)
+                        }
+                        .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+                    completion(items)
+                }
             }
         }
     }
@@ -118,63 +123,170 @@ enum ModUpdateService {
         }
         guard !hashToMod.isEmpty else { return [] }
         
-        // 批量反查当前版本
-        let currentVersions: [String: ModrinthVersion] = try await ModrinthAPIClient.shared.versions(ofHashes: Array(hashToMod.keys))
-        guard !currentVersions.isEmpty else { return [] }
+        var entries: [UpdateEntry] = []
         
-        // 按 projectId 分组
-        var projectToHashes: [String: [String]] = [:]
-        for (hash, version) in currentVersions {
-            projectToHashes[version.projectId, default: []].append(hash)
+        // MARK: Modrinth
+        
+        let currentVersions: [String: ModrinthVersion] = (try? await ModrinthAPIClient.shared.versions(ofHashes: Array(hashToMod.keys))) ?? [:]
+        var coveredHashes: Set<String> = []
+        
+        if !currentVersions.isEmpty {
+            // 按 projectId 分组
+            var projectToHashes: [String: [String]] = [:]
+            for (hash, version) in currentVersions {
+                projectToHashes[version.projectId, default: []].append(hash)
+            }
+            
+            // 并发获取各项目的版本列表
+            let projectVersions: [String: [ModrinthVersion]] = try await withThrowingTaskGroup(of: (String, [ModrinthVersion]).self) { group in
+                for projectId in projectToHashes.keys {
+                    group.addTask {
+                        (projectId, try await ModrinthAPIClient.shared.versions(ofProject: projectId, revalidate: true))
+                    }
+                }
+                var result: [String: [ModrinthVersion]] = [:]
+                for try await (projectId, versions) in group {
+                    result[projectId] = versions
+                }
+                return result
+            }
+            
+            // 筛选兼容的最新版本
+            let gameVersionId: String = instance.version.id
+            let modLoader: ModLoader? = instance.modLoader
+            
+            for (hash, (url, resource)) in hashToMod {
+                guard let currentVersion = currentVersions[hash],
+                      let versions = projectVersions[currentVersion.projectId] else {
+                    continue
+                }
+                
+                let compatible: [ModrinthVersion] = versions.filter { version in
+                    version.gameVersions.contains(gameVersionId)
+                    && (modLoader == nil || version.loaders.contains(modLoader!))
+                }
+                
+                guard let latest = compatible.max(by: { $0.datePublished < $1.datePublished }) else {
+                    continue
+                }
+                
+                // 当前版本已是最新
+                if latest.id == currentVersion.id { continue }
+                // 防止降级：只接受发布时间更晚的版本
+                if latest.datePublished <= currentVersion.datePublished { continue }
+                
+                guard let file = latest.files.first(where: { $0.primary }) ?? latest.files.first else {
+                    continue
+                }
+                
+                entries.append(.init(
+                    url: url,
+                    name: resource.name.isEmpty ? file.name : resource.name,
+                    oldVersion: currentVersion.versionNumber,
+                    newVersion: latest.versionNumber,
+                    fileName: file.name,
+                    downloadURL: file.url,
+                    sha1: file.sha1
+                ))
+                coveredHashes.insert(hash)
+            }
         }
         
-        // 并发获取各项目的版本列表
-        let projectVersions: [String: [ModrinthVersion]] = try await withThrowingTaskGroup(of: (String, [ModrinthVersion]).self) { group in
-            for projectId in projectToHashes.keys {
+        // MARK: CurseForge
+        
+        if let apiKey = Secrets.shared.curseforgeApiKey, !apiKey.isEmpty {
+            entries.append(contentsOf: await checkCurseForgeUpdates(
+                instance: instance,
+                hashToMod: hashToMod,
+                coveredHashes: coveredHashes,
+                client: .init(apiKey: apiKey)
+            ))
+        }
+        
+        return entries
+    }
+    
+    /// 通过 CurseForge 指纹反查并检查更新。
+    private static func checkCurseForgeUpdates(
+        instance: MinecraftInstance,
+        hashToMod: [String: (URL, Resource)],
+        coveredHashes: Set<String>,
+        client: CurseForgeAPIClient
+    ) async -> [UpdateEntry] {
+        let fileManager: FileManager = .default
+        
+        // 计算尚未被 Modrinth 命中的文件的 CurseForge 指纹
+        var fingerprintToHash: [UInt32: String] = [:]
+        for (hash, (url, _)) in hashToMod where !coveredHashes.contains(hash) {
+            guard fileManager.fileExists(atPath: url.path),
+                  let fingerprint = try? FileUtils.curseForgeFingerprint(of: url) else {
+                continue
+            }
+            fingerprintToHash[fingerprint] = hash
+        }
+        guard !fingerprintToHash.isEmpty else { return [] }
+        
+        guard let matches: [CurseForgeFingerprintMatch] = try? await client.matches(fingerprints: Array(fingerprintToHash.keys)),
+              !matches.isEmpty else {
+            return []
+        }
+        
+        // 用返回文件的 SHA-1 匹配回本地文件，并按模组分组
+        var modIdToCurrent: [Int32: (file: CurseForgeModFile, hash: String)] = [:]
+        for match in matches {
+            guard let sha1 = match.file.checksums["sha1"],
+                  hashToMod[sha1] != nil,
+                  !coveredHashes.contains(sha1) else {
+                continue
+            }
+            modIdToCurrent[match.file.modId] = (match.file, sha1)
+        }
+        guard !modIdToCurrent.isEmpty else { return [] }
+        
+        // 并发获取每个模组在当前游戏版本与加载器下的文件列表
+        let fileLists: [Int32: [CurseForgeModFile]] = await withTaskGroup(of: (Int32, [CurseForgeModFile]).self) { group in
+            for modId in modIdToCurrent.keys {
                 group.addTask {
-                    (projectId, try await ModrinthAPIClient.shared.versions(ofProject: projectId, revalidate: true))
+                    (modId, (try? await client.files(ofMod: modId, gameVersion: instance.version.id, modLoader: instance.modLoader)) ?? [])
                 }
             }
-            var result: [String: [ModrinthVersion]] = [:]
-            for try await (projectId, versions) in group {
-                result[projectId] = versions
+            var result: [Int32: [CurseForgeModFile]] = [:]
+            for await (modId, files) in group {
+                result[modId] = files
             }
             return result
         }
         
-        // 筛选兼容的最新版本
-        let gameVersionId: String = instance.version.id
-        let modLoader: ModLoader? = instance.modLoader
         var entries: [UpdateEntry] = []
-        
-        for (hash, (url, resource)) in hashToMod {
-            guard let currentVersion = currentVersions[hash],
-                  let versions = projectVersions[currentVersion.projectId] else {
+        for (modId, current) in modIdToCurrent {
+            let available: [CurseForgeModFile] = (fileLists[modId] ?? []).filter(\.available)
+            guard let latest = available.max(by: { ($0.fileDate ?? .distantPast) < ($1.fileDate ?? .distantPast) }) else {
                 continue
             }
-            
-            let compatible: [ModrinthVersion] = versions.filter { version in
-                version.gameVersions.contains(gameVersionId)
-                && (modLoader == nil || version.loaders.contains(modLoader!))
-            }
-            
-            guard let latest = compatible.max(by: { $0.datePublished < $1.datePublished }) else {
+            if latest.id == current.file.id { continue }
+            if let latestDate = latest.fileDate, let currentDate = current.file.fileDate, latestDate <= currentDate {
                 continue
             }
+            guard let (url, resource) = hashToMod[current.hash] else { continue }
             
-            // 当前版本已是最新
-            if latest.id == currentVersion.id { continue }
-            // 防止降级：只接受发布时间更晚的版本
-            if latest.datePublished <= currentVersion.datePublished { continue }
-            
-            guard let file = latest.files.first(where: { $0.primary }) ?? latest.files.first else {
-                continue
-            }
-            
-            entries.append(UpdateEntry(url: url, resource: resource, currentVersion: currentVersion, targetVersion: latest, targetFile: file))
+            entries.append(.init(
+                url: url,
+                name: resource.name.isEmpty ? current.file.fileName : resource.name,
+                oldVersion: versionLabel(of: current.file),
+                newVersion: versionLabel(of: latest),
+                fileName: latest.fileName,
+                downloadURL: latest.downloadURL,
+                sha1: latest.checksums["sha1"]
+            ))
         }
-        
         return entries
+    }
+    
+    private static func versionLabel(of file: CurseForgeModFile) -> String {
+        if let displayName = file.displayName, !displayName.isEmpty {
+            return displayName
+        }
+        return (file.fileName as NSString).deletingPathExtension
     }
     
     // MARK: - 下载并替换
@@ -196,11 +308,11 @@ enum ModUpdateService {
         try await withThrowingTaskGroup(of: Void.self) { group in
             for entry in entries {
                 group.addTask {
-                    let tempFile: URL = tempRoot.appending(path: entry.targetFile.name)
+                    let tempFile: URL = tempRoot.appending(path: "\(UUID().uuidString)-\(entry.fileName)")
                     try await FileDownloader.shared.download(
-                        url: entry.targetFile.url,
+                        url: entry.downloadURL,
                         destination: tempFile,
-                        sha1: entry.targetFile.sha1,
+                        sha1: entry.sha1,
                         progressHandler: { progress in
                             Task { @MainActor in
                                 let current = await MainActor.run { completed }
@@ -211,7 +323,7 @@ enum ModUpdateService {
                     
                     // 替换旧文件（保留 .disabled 后缀）
                     let disabled: Bool = entry.url.pathExtension == "disabled"
-                    var newURL: URL = entry.url.deletingLastPathComponent().appending(path: entry.targetFile.name)
+                    var newURL: URL = entry.url.deletingLastPathComponent().appending(path: entry.fileName)
                     if disabled {
                         newURL.appendPathExtension("disabled")
                     }
