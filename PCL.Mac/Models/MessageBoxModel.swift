@@ -16,6 +16,7 @@ struct MessageBoxModel: Equatable, Identifiable {
     
     public enum Content {
         case text(text: String)
+        case markdown(text: String)
         case list(items: [ListItem])
         case input(initialContent: String?, placeholder: String?)
     }

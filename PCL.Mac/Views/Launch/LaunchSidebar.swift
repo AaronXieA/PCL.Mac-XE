@@ -60,37 +60,6 @@ struct LaunchSidebar: Sidebar {
 
             Spacer()
             VStack(spacing: 11) {
-                if let instance = instanceVM.currentInstance, instance.modLoader != nil {
-                    MyButton("一键更新模组", type: .black) {
-                        Task {
-                            if await MessageBoxManager.shared.showTextAsync(
-                                title: "确认",
-                                content: "确定要检查并更新实例（\(instance.name)）的所有模组吗？\n更新任务将在后台执行，可在任务页面查看进度。",
-                                level: .info,
-                                .no(),
-                                .yes(type: .highlight)
-                            ) == 1 {
-                                await ModUpdateService.requestUpdate(for: instance) { updatedMods in
-                                    Task { @MainActor in
-                                        if updatedMods.isEmpty {
-                                            hint("所有 Mod 都已是最新版本！", type: .finish)
-                                        } else {
-                                            let detail: String = updatedMods.map {
-                                                "· \($0.name)：\($0.oldVersion) → \($0.newVersion)"
-                                            }.joined(separator: "\n")
-                                            await MessageBoxManager.shared.showTextAsync(
-                                                title: "模组更新完成（\(updatedMods.count) 个）",
-                                                content: "以下 Mod 已更新：\n\(detail)",
-                                                level: .info
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .frame(height: 32)
-                }
                 Group {
                     if let instance = instanceVM.currentInstance {
                         MyButton("启动游戏", subLabel: instance.name, type: launchVM.isMultiLaunchEnabled ? .orange : .highlight) {

@@ -21,6 +21,9 @@ public class ModrinthAPIClient {
     ///   - type: 项目类型（`ResourceType`）。
     ///   - query: 搜索关键词。
     ///   - gameVersion: 过滤游戏版本。
+    ///   - loaders: 过滤加载器（如 `fabric`、`forge`）。
+    ///   - categories: 过滤分类（如 `technology`）。
+    ///   - index: 排序方式（`relevance`、`downloads`、`follows`、`newest`、`updated`）。
     ///   - pageIndex: 页码，从 0 开始。
     ///   - limit: 返回结果数量上限。
     /// - Returns: 包含搜索结果和分页信息的 `SearchResponse`。
@@ -28,12 +31,21 @@ public class ModrinthAPIClient {
         type: ResourceType,
         _ query: String?,
         forVersion gameVersion: String?,
+        loaders: [String] = [],
+        categories: [String] = [],
+        index: String = "relevance",
         pageIndex: Int = 0,
         limit: Int = 40
     ) async throws -> SearchResponse {
         var facets: [[String]] = [["project_type:\(type)"]]
         if let gameVersion {
             facets.append(["versions:\(gameVersion)"])
+        }
+        if !loaders.isEmpty {
+            facets.append(loaders.map { "categories:\($0)" })
+        }
+        if !categories.isEmpty {
+            facets.append(categories.map { "categories:\($0)" })
         }
         let facetsString: String = String(data: try JSONSerialization.data(withJSONObject: facets), encoding: .utf8)!
         
@@ -42,6 +54,7 @@ public class ModrinthAPIClient {
             params: [
                 "query": query == "" ? nil : query,
                 "facets": facetsString,
+                "index": index,
                 "limit": String(describing: limit),
                 "offset": String(describing: pageIndex * limit)
             ]

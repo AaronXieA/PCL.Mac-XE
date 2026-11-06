@@ -68,12 +68,18 @@ jobs:
       
       - name: Create release
         run: |
+          NOTES_FILE=".github/release-notes/$VERSION_NUMBER.md"
+          if [ -f "$NOTES_FILE" ]; then
+            NOTES_ARGS=(--notes-file "$NOTES_FILE")
+          else
+            NOTES_ARGS=(--generate-notes)
+          fi
           gh release create $TAG_NAME \
             "PCL.Mac-${{ env.TAG_NAME }}.dmg" \
             "PCL.Mac-${{ env.TAG_NAME }}.zip" \
             "build.xcarchive.zip" \
-            --title $VERSION_NUMBER \
-            --generate-notes \
+            --title "PCL.Mac XE $VERSION_NUMBER" \
+            "${NOTES_ARGS[@]}" \
             --draft
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

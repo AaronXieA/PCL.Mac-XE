@@ -13,7 +13,12 @@ struct ResourceInstallPage: View {
     @StateObject private var instanceVM: InstanceViewModel
     @State private var currentPage: Int = 0
     
-    init(instanceManager: InstanceManager, project: ProjectListItemModel) {
+    private let instanceManager: InstanceManager
+    private let targetInstanceId: UUID?
+    
+    init(instanceManager: InstanceManager, project: ProjectListItemModel, instanceId: UUID?) {
+        self.instanceManager = instanceManager
+        self.targetInstanceId = instanceId
         self._viewModel = .init(wrappedValue: .init(project: project))
         self._instanceVM = .init(wrappedValue: InstanceViewModel(instanceManager: instanceManager))
     }
@@ -45,7 +50,7 @@ struct ResourceInstallPage: View {
         }
         .task(id: viewModel.project) {
             do {
-                try await viewModel.load(selectedInstance: instanceVM.currentInstance)
+                try await viewModel.load(selectedInstance: resolveTargetInstance())
             } catch let error where error.isCancellationError {
             } catch {
                 err("加载\(viewModel.project.type.localizedName) \(viewModel.project.title) 版本列表失败：\(error)")
@@ -54,8 +59,28 @@ struct ResourceInstallPage: View {
         }
     }
     
+    /// 解析搜索页指定的安装目标实例；未指定或实例已被删除时回退到当前实例。
+    private func resolveTargetInstance() -> MinecraftInstance? {
+        guard let targetInstanceId else {
+            return instanceVM.currentInstance
+        }
+        for repository in instanceManager.repositories.values {
+            if let instance = repository.instance(id: targetInstanceId) {
+                return instance
+            }
+        }
+        hint("所选实例已不存在，已回退到当前实例。", type: .critical)
+        return instanceVM.currentInstance
+    }
+    
+    /// 搜索页指定实例所在的仓库，未指定时返回当前仓库。
+    private var targetRepository: MinecraftRepository {
+        guard let targetInstanceId else { return instanceVM.currentRepository }
+        return instanceManager.repositories.values.first { $0.contains(id: targetInstanceId) } ?? instanceVM.currentRepository
+    }
+    
     private func onVersionTap(_ version: ProjectVersionModel) async throws {
-        guard let instance: MinecraftInstance = instanceVM.currentInstance else {
+        guard let instance: MinecraftInstance = resolveTargetInstance() else {
             hint("请先安装并选择一个实例！", type: .critical)
             return
         }
@@ -101,7 +126,7 @@ struct ResourceInstallPage: View {
     }
     
     private func onModpackTap(_ version: ProjectVersionModel) async throws {
-        let repository = instanceVM.currentRepository
+        let repository = targetRepository
         guard await MessageBoxManager.shared.showTextAsync(
             title: "确认",
             content: "确定要安装整合包 \(viewModel.project.title) \(version.version) 吗？",
@@ -160,7 +185,7 @@ struct ResourceInstallPage: View {
                         ForEach(dependencies) { dependency in
                             ProjectListItemView(project: dependency.project)
                                 .onTapGesture {
-                                    AppRouter.shared.append(.projectInstall(project: dependency.project))
+                                    AppRouter.shared.append(.projectInstall(project: dependency.project, instanceId: targetInstanceId))
                                 }
                         }
                     }

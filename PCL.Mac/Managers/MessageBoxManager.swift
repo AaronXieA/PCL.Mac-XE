@@ -42,6 +42,27 @@ class MessageBoxManager: ObservableObject {
         return id
     }
     
+    /// 弹出一个带有 Markdown 内容的模态框。（Swift Concurrency）
+    /// - Parameters:
+    ///   - title: 模态框标题。
+    ///   - content: Markdown 内容。
+    ///   - level: 模态框等级，控制了模态框的颜色。
+    ///   - buttons: 按钮列表。
+    /// - Returns: 被点击的按钮的 `id`。
+    public func showMarkdownAsync(
+        title: String,
+        content: String,
+        level: MessageBoxModel.Level = .info,
+        buttons: [MessageBoxModel.Button]
+    ) async -> Int {
+        let result: MessageBoxResult = await showAsync(title: title, content: .markdown(text: content), level: level, buttons: buttons)
+        guard case .button(let id) = result else {
+            warn("期望 result 类型（button）与实际类型（\(result)）不匹配")
+            return buttons[0].id
+        }
+        return id
+    }
+    
     /// 弹出一个带有列表的模态框。（Swift Concurrency）
     /// - Parameters:
     ///   - title: 模态框标题。

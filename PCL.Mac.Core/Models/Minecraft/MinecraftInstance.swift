@@ -13,7 +13,7 @@ public class MinecraftInstance: Hashable, Identifiable, Equatable {
     public let url: URL
     public let version: MinecraftVersion
     public let modLoader: ModLoader?
-    public let manifest: ClientManifest
+    public var manifest: ClientManifest
     
     public var config: Config
     

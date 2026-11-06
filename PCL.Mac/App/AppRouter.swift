@@ -20,7 +20,7 @@ enum AppRoute: Identifiable, Hashable, Equatable {
     
     // 下载页面的子页面
     case minecraftDownload, minecraftInstallOptions(version: VersionManifest.Version), modDownload, resourcepackDownload, shaderpackDownload, modpackDownload
-    case projectInstall(project: ProjectListItemModel)
+    case projectInstall(project: ProjectListItemModel, instanceId: UUID?)
     
     // 联机页面的子页面
     case multiplayerSub, multiplayerSettings
@@ -54,7 +54,7 @@ class AppRouter: ObservableObject {
         case .instanceList: "实例列表"
         case .instanceSettings(let id), .instanceConfig(let id), .installedResources(let id, _): "实例设置 - \(id)"
         case .minecraftInstallOptions(let version): "游戏安装 - \(version.id)"
-        case .projectInstall(let project): "资源下载 - \(project.title)"
+        case .projectInstall(let project, _): "资源下载 - \(project.title)"
         default: "错误：当前页面（\(last)）没有标题，请报告此问题！"
         }
     }
@@ -118,8 +118,8 @@ struct AppRouterView: View {
             ResourcesSearchPage(type: .shader)
         case .modpackDownload:
             ResourcesSearchPage(type: .modpack)
-        case .projectInstall(let project):
-            ResourceInstallPage(instanceManager: instanceManager, project: project)
+        case .projectInstall(let project, let instanceId):
+            ResourceInstallPage(instanceManager: instanceManager, project: project, instanceId: instanceId)
                 .id(project)
         case .tasks:
             TasksPage()

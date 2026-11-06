@@ -56,6 +56,7 @@ public struct CurseForgeModFile: Codable {
     public let fileName: String
     public let displayName: String?
     public let fileDate: Date?
+    public let gameVersions: [String]?
     public let hashes: [FileHash]
     public let downloadURL: URL
     
@@ -70,7 +71,7 @@ public struct CurseForgeModFile: Codable {
     }
     
     private enum CodingKeys: String, CodingKey {
-        case id, modId, fileName, displayName, fileDate, hashes
+        case id, modId, fileName, displayName, fileDate, gameVersions, hashes
         case available = "isAvailable", downloadURL = "downloadUrl"
     }
     
@@ -81,6 +82,7 @@ public struct CurseForgeModFile: Codable {
         self.fileName = try container.decode(String.self, forKey: .fileName)
         self.displayName = try? container.decode(String.self, forKey: .displayName)
         self.fileDate = (try? container.decode(String.self, forKey: .fileDate)).flatMap(Self.parseDate)
+        self.gameVersions = try? container.decode([String].self, forKey: .gameVersions)
         self.hashes = try container.decode([CurseForgeModFile.FileHash].self, forKey: .hashes)
         self.available = try container.decode(Bool.self, forKey: .available)
         self.downloadURL = try container.decodeIfPresent(URL.self, forKey: .downloadURL) ?? .init(string: "https://edge.forgecdn.net/files/\(id / 1000)/\(id % 1000)/\(fileName)")!

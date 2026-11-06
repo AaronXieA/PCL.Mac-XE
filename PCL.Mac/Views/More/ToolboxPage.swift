@@ -58,6 +58,8 @@ struct ToolboxPage: View {
                 do {
                     try await viewModel.fetchCaveMessages()
                 } catch {
+                    // 离开页面时 SwiftUI 会取消该任务，属于正常取消，不应提示
+                    if error.isCancellationError { return }
                     err("加载回声洞消息列表失败：\(error.localizedDescription)")
                     hint("加载回声洞消息列表失败：\(error.localizedDescription)", type: .critical)
                 }

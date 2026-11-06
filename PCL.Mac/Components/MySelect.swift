@@ -10,9 +10,13 @@ import SwiftUI
 struct MySelect<Entry: Hashable & CustomStringConvertible>: View {
     @State private var hovered: Bool = false
     @State private var presented: Bool = false
+    @State private var isPressed: Bool = false
     @State private var panel: SelectPanel?
     @State private var rect: NSRect = .zero
+    @State private var selectRect: NSRect = .zero
     @State private var observer: NSObjectProtocol?
+    @State private var mouseMonitor: Any?
+    @State private var pulseWorkItem: DispatchWorkItem?
     
     @Binding private var selected: Entry
     
@@ -37,34 +41,46 @@ struct MySelect<Entry: Hashable & CustomStringConvertible>: View {
                     }
             }
             
-            RoundedRectangle(cornerRadius: 4)
-                .strokeBorder(foregroundColor, lineWidth: 1.5, antialiased: false)
-                .background(backgroundColor)
-                .allowsHitTesting(false)
-            
-            HStack {
-                MyText(selected.description)
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 4)
+                    .strokeBorder(foregroundColor, lineWidth: 1.5, antialiased: false)
+                    .background(backgroundColor)
+                    .allowsHitTesting(false)
                 
-                Spacer(minLength: 0)
-                
-                Image(.btnFold)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 8)
-                    .rotationEffect(.degrees(presented ? -180 : 0), anchor: .center)
-                    .animation(.spring(response: 0.35), value: presented)
-                    .foregroundStyle(foregroundColor)
-                    .padding(.trailing, 2)
+                HStack {
+                    MyText(selected.description)
+                    
+                    Spacer(minLength: 0)
+                    
+                    Image(.btnFold)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 8)
+                        .rotationEffect(.degrees(presented ? -180 : 0), anchor: .center)
+                        .animation(.spring(response: 0.35), value: presented)
+                        .foregroundStyle(foregroundColor)
+                        .padding(.trailing, 2)
+                }
+                .padding(.horizontal, 6)
             }
-            .padding(.horizontal, 6)
+            // 仅缩放视觉层，避免缩放引起 GeometryReader 的全局坐标变化而误关面板
+            .scaleEffect(isPressed ? 0.97 : 1.0)
         }
         .frame(height: 26)
+        .animation(.easeInOut(duration: 0.2), value: isPressed)
         .contentShape(RoundedRectangle(cornerRadius: 4))
-        .onTapGesture {
-            presented.toggle()
-        }
         .onHover { hovered = $0 }
         .animation(.linear(duration: 0.1), value: hovered)
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    isPressed = true
+                }
+                .onEnded { _ in
+                    isPressed = false
+                    presented.toggle()
+                }
+        )
         .onChange(of: presented) { newValue in
             close()
             if newValue {
@@ -96,6 +112,7 @@ struct MySelect<Entry: Hashable & CustomStringConvertible>: View {
                 panel.makeKeyAndOrderFront(nil)
                 
                 self.panel = panel
+                installMouseMonitor()
             }
         }
         .onDisappear {
@@ -116,8 +133,37 @@ struct MySelect<Entry: Hashable & CustomStringConvertible>: View {
             NotificationCenter.default.removeObserver(observer)
             self.observer = nil
         }
+        removeMouseMonitor()
         panel?.close()
         panel = nil
+    }
+    
+    /// 监听面板展开期间的鼠标点击，点击下拉框本体时也播放按压缩小动画。
+    private func installMouseMonitor() {
+        guard mouseMonitor == nil else { return }
+        mouseMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { event in
+            if presented, selectRect.contains(NSEvent.mouseLocation) {
+                pulsePress()
+            }
+            return event
+        }
+    }
+    
+    private func removeMouseMonitor() {
+        if let mouseMonitor {
+            NSEvent.removeMonitor(mouseMonitor)
+            self.mouseMonitor = nil
+        }
+    }
+    
+    private func pulsePress() {
+        isPressed = true
+        pulseWorkItem?.cancel()
+        let workItem: DispatchWorkItem = .init {
+            isPressed = false
+        }
+        pulseWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: workItem)
     }
     
     private func recalculateRect(proxy: GeometryProxy) {
@@ -134,6 +180,12 @@ struct MySelect<Entry: Hashable & CustomStringConvertible>: View {
             height: popupHeight
         )
         rect = window.convertToScreen(rectInWindow)
+        selectRect = window.convertToScreen(NSRect(
+            x: global.minX,
+            y: contentHeight - (global.minY - 1) - proxy.size.height,
+            width: global.width,
+            height: proxy.size.height
+        ))
     }
 }
 

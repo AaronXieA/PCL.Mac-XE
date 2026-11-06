@@ -13,9 +13,10 @@ struct MySearchBox: View {
     private let placeholder: String
     private let onSubmit: (String) -> Void
     
-    init(placeholder: String, onSubmit: @escaping (String) -> Void) {
+    init(placeholder: String, initialText: String = "", onSubmit: @escaping (String) -> Void) {
         self.placeholder = placeholder
         self.onSubmit = onSubmit
+        self._query = State(initialValue: initialText)
     }
     
     var body: some View {

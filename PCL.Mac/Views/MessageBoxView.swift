@@ -66,6 +66,14 @@ struct MessageBoxView: View {
             switch model.content {
             case .text(let text):
                 MyText(text)
+            case .markdown(let text):
+                ScrollView {
+                    MarkdownView(text)
+                        .padding(.horizontal, 2)
+                        .padding(.vertical, 2)
+                }
+                .frame(width: 560)
+                .frame(maxHeight: 400)
             case .list(let items):
                 ScrollView {
                     MyList(items: items, onSelect: { self.selectedItemIndex = $0 })
@@ -80,7 +88,7 @@ struct MessageBoxView: View {
     
     private func onButtonTap(_ button: MessageBoxModel.Button) {
         switch model.content {
-        case .text(_):
+        case .text(_), .markdown(_):
             MessageBoxManager.shared.onButtonTap(button)
         case .list(_):
             if button.id == MessageBoxManager.cancelButtonID { // 取消

@@ -41,9 +41,13 @@ class UpdateService {
                 return
             }
             
-            let result = await MessageBoxManager.shared.showTextAsync(
+            let summary: String = version.summary.trimmingCharacters(in: .whitespacesAndNewlines)
+            let content: String = summary.isEmpty
+                ? "发现新版本：\(version.name)\n\n是否下载并安装更新？"
+                : "发现新版本：\(version.name)\n\n## 更新内容\n\n\(summary)\n\n是否下载并安装更新？"
+            let result = await MessageBoxManager.shared.showMarkdownAsync(
                 title: "PCL.Mac XE 有更新可用",
-                content: "发现新版本：\(version.name)\n更新摘要：\(version.summary)\n\n是否下载并安装更新？",
+                content: content,
                 level: .info,
                 buttons: version.updateLogLinks.enumerated().map { index, link in
                     return .init(id: index + 10, label: link.name, type: .normal) {
