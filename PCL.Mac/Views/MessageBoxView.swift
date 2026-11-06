@@ -67,13 +67,13 @@ struct MessageBoxView: View {
             case .text(let text):
                 MyText(text)
             case .markdown(let text):
-                ScrollView {
+                ScrollView(.vertical) {
                     MarkdownView(text)
                         .padding(.horizontal, 2)
                         .padding(.vertical, 2)
                 }
-                .frame(width: 560)
-                .frame(maxHeight: 400)
+                .frame(width: 460)
+                .frame(maxHeight: 220)
             case .list(let items):
                 ScrollView {
                     MyList(items: items, onSelect: { self.selectedItemIndex = $0 })
