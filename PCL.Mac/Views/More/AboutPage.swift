@@ -30,7 +30,7 @@ struct AboutPage: View {
                                 .init("GitHub 主页", "https://github.com/AaronXieA"))
                     
                     ProfileView(.local(.pclMac), "PCL.Mac XE", "当前版本：\(Metadata.appVersion) (\(Metadata.bundleVersion))",
-                                .init("GitHub 仓库", "https://github.com/AaronXieA/PCL.Mac.Buggest"),
+                                .init("GitHub 仓库", "https://github.com/AaronXieA/PCL.Mac-XE"),
                                 .init("更新了什么？", action: { showChangelog() }))
                 }
             }
