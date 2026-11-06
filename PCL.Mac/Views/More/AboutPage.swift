@@ -30,7 +30,8 @@ struct AboutPage: View {
                                 .init("GitHub 主页", "https://github.com/AaronXieA"))
                     
                     ProfileView(.local(.pclMac), "PCL.Mac XE", "当前版本：\(Metadata.appVersion) (\(Metadata.bundleVersion))",
-                                .init("GitHub 仓库", "https://github.com/AaronXieA/PCL.Mac.Buggest"))
+                                .init("GitHub 仓库", "https://github.com/AaronXieA/PCL.Mac.Buggest"),
+                                .init("更新了什么？", action: { showChangelog() }))
                 }
             }
             
@@ -81,6 +82,24 @@ struct AboutPage: View {
         }
     }
     
+    private func showChangelog() {
+        hint("正在获取更新内容……")
+        Task {
+            do {
+                let changelog = try await UpdateManager.shared.fetchChangelog()
+                let body: String = changelog.body.trimmingCharacters(in: .whitespacesAndNewlines)
+                _ = await MessageBoxManager.shared.showMarkdownAsync(
+                    title: "更新内容",
+                    content: body.isEmpty ? "当前版本（\(changelog.version)）没有提供更新说明。" : body,
+                    level: .info,
+                    buttons: [.init(id: 1, label: "确定", type: .highlight)]
+                )
+            } catch {
+                hint("获取更新内容失败：\(error.localizedDescription)", type: .critical)
+            }
+        }
+    }
+    
     private struct ProfileView: View {
         @ObservedObject private var easterEggManager: EasterEggManager = .shared
         @Environment(\.disableHoverAnimation) private var cardAppearAnimationPlaying: Bool
@@ -127,13 +146,15 @@ struct AboutPage: View {
                     }
                     Spacer()
                     HStack {
-                        ForEach(links, id: \.url) { link in
+                        ForEach(links, id: \.buttonName) { link in
                             MyButton(link.buttonName) {
-                                if let url: URL = .init(string: link.url) {
+                                if let action: () -> Void = link.action {
+                                    action()
+                                } else if let urlString: String = link.url, let url: URL = .init(string: urlString) {
                                     NSWorkspace.shared.open(url)
                                 }
                             }
-                            .frame(width: 100)
+                            .frame(width: 110)
                         }
                     }
                     .padding(.trailing, 2)
@@ -144,11 +165,19 @@ struct AboutPage: View {
         
         struct Link {
             let buttonName: String
-            let url: String
+            let url: String?
+            let action: (() -> Void)?
             
             init(_ buttonName: String, _ url: String) {
                 self.buttonName = buttonName
                 self.url = url
+                self.action = nil
+            }
+            
+            init(_ buttonName: String, action: @escaping () -> Void) {
+                self.buttonName = buttonName
+                self.url = nil
+                self.action = action
             }
         }
         

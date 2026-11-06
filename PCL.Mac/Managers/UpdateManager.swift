@@ -37,6 +37,22 @@ class UpdateManager {
         )
     }
     
+    /// 获取当前版本的更新内容。优先按当前版本号查找对应的 Release，失败时回退到最新 Release。
+    public func fetchChangelog() async throws -> (version: String, body: String, url: URL) {
+        var tags: [String] = ["v\(Metadata.appVersion)"]
+        if Metadata.bundleVersion != 0 {
+            tags.insert("v\(Metadata.appVersion).\(Metadata.bundleVersion)", at: 0)
+        }
+        for tag in tags {
+            guard let url: URL = .init(string: "https://api.github.com/repos/AaronXieA/PCL.Mac-XE/releases/tags/\(tag)") else { continue }
+            if let release: GitHubRelease = try? await HTTPClient.shared.get(url, revalidate: true).decode(GitHubRelease.self) {
+                return (release.tagName, release.body ?? "", release.htmlURL)
+            }
+        }
+        let release: GitHubRelease = try await HTTPClient.shared.get(updateMetadataURL, revalidate: true).decode(GitHubRelease.self)
+        return (release.tagName, release.body ?? "", release.htmlURL)
+    }
+    
     /// 将 `a.b.c.d` 形式的版本号展示为 `a.b.c (d)`。
     private func displayName(of version: String) -> String {
         let parts: [Substring] = version.split(separator: ".")
