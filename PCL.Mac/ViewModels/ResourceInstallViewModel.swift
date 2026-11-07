@@ -15,6 +15,10 @@ class ResourceInstallViewModel: ObservableObject {
     
     @Published public var versionList: VersionList?
     @Published public var selectedVersionGroup: VersionGroup?
+    /// 版本 / 加载器筛选器命中的最佳版本（仅在筛选器开启时存在）
+    @Published public var filteredVersionGroup: VersionGroup?
+    /// 是否开启了版本 / 加载器筛选器
+    @Published public var hasFilter: Bool = false
     @Published public var loaded: Bool = false
     
     public let project: ProjectListItemModel
@@ -24,7 +28,11 @@ class ResourceInstallViewModel: ObservableObject {
         self.project = project
     }
     
-    public func load(selectedInstance: MinecraftInstance? = nil) async throws {
+    public func load(
+        selectedInstance: MinecraftInstance? = nil,
+        filterVersion: String? = nil,
+        filterLoader: ModLoader? = nil
+    ) async throws {
         let selectedInstanceKey: VersionMapKey? = project.type == .modpack ? nil : selectedInstance.map { .init(loader: $0.modLoader, version: $0.version) }
         let selectedVersionType: MinecraftVersion.VersionType? = (selectedInstance?.version).flatMap { VersionManifest.shared?.version(for: $0.id) }?.type
         var selectedVersionGroup: VersionGroup? = selectedInstanceKey.map { ($0, []) }
@@ -89,9 +97,29 @@ class ResourceInstallViewModel: ObservableObject {
         
         let versionList: VersionList = versionMap.map { ($0, $1) }.sorted(by: { $0.0 > $1.0 })
         let finalSelectedGroup: VersionGroup? = selectedVersionGroup?.1.isEmpty == true ? nil : selectedVersionGroup
+        
+        // 版本 / 加载器筛选：取所有分组中（含当前实例分组）按键排序最大的一个
+        let hasFilter: Bool = filterVersion != nil || filterLoader != nil
+        var filteredVersionGroup: VersionGroup? = nil
+        if hasFilter {
+            var candidates: VersionList = versionList
+            if let finalSelectedGroup {
+                candidates.append(finalSelectedGroup)
+            }
+            candidates.sort { $0.0 > $1.0 }
+            for candidate in candidates {
+                if let filterVersion, candidate.0.version.id != filterVersion { continue }
+                if let filterLoader, candidate.0.loader != filterLoader { continue }
+                filteredVersionGroup = candidate
+                break
+            }
+        }
+        
         await MainActor.run {
             self.versionList = versionList
             self.selectedVersionGroup = finalSelectedGroup
+            self.filteredVersionGroup = filteredVersionGroup
+            self.hasFilter = hasFilter
             self.loaded = true
         }
     }

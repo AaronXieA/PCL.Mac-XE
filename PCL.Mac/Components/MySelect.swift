@@ -15,16 +15,26 @@ struct MySelect<Entry: Hashable & CustomStringConvertible>: View {
     @State private var rect: NSRect = .zero
     @State private var selectRect: NSRect = .zero
     @State private var observer: NSObjectProtocol?
+    @State private var moveObserver: NSObjectProtocol?
     @State private var mouseMonitor: Any?
     @State private var pulseWorkItem: DispatchWorkItem?
+    @State private var hostingWindow: NSWindow?
+    @State private var localFrame: NSRect = .zero
+    @State private var itemSize: CGSize = .zero
+    @State private var retryWorkItem: DispatchWorkItem?
     
     @Binding private var selected: Entry
     
     private let entries: [Entry]
+    /// 置灰显示（此时仍可点击，但只回调 onGrayedTap，不展开面板）
+    private let grayed: Bool
+    private let onGrayedTap: (() -> Void)?
     
-    init(_ selected: Binding<Entry>, entries: [Entry]) {
+    init(_ selected: Binding<Entry>, entries: [Entry], grayed: Bool = false, onGrayedTap: (() -> Void)? = nil) {
         self._selected = selected
         self.entries = entries
+        self.grayed = grayed
+        self.onGrayedTap = onGrayedTap
     }
     
     var body: some View {
@@ -32,12 +42,14 @@ struct MySelect<Entry: Hashable & CustomStringConvertible>: View {
             GeometryReader { proxy in
                 Color.clear
                     .onAppear {
-                        recalculateRect(proxy: proxy)
+                        updateLayout(proxy)
+                        recalculateRect()
                     }
                     .onChange(of: proxy.frame(in: .global)) { _ in
+                        updateLayout(proxy)
                         close()
                         presented = false
-                        recalculateRect(proxy: proxy)
+                        recalculateRect()
                     }
             }
             
@@ -48,7 +60,7 @@ struct MySelect<Entry: Hashable & CustomStringConvertible>: View {
                     .allowsHitTesting(false)
                 
                 HStack {
-                    MyText(selected.description)
+                    MyText(selected.description, color: textColor)
                     
                     Spacer(minLength: 0)
                     
@@ -67,6 +79,14 @@ struct MySelect<Entry: Hashable & CustomStringConvertible>: View {
             .scaleEffect(isPressed ? 0.97 : 1.0)
         }
         .frame(height: 26)
+        .background(
+            WindowAccessor { window in
+                if let window {
+                    hostingWindow = window
+                }
+            }
+            .allowsHitTesting(false)
+        )
         .animation(.easeInOut(duration: 0.2), value: isPressed)
         .contentShape(RoundedRectangle(cornerRadius: 4))
         .onHover { hovered = $0 }
@@ -78,41 +98,29 @@ struct MySelect<Entry: Hashable & CustomStringConvertible>: View {
                 }
                 .onEnded { _ in
                     isPressed = false
-                    presented.toggle()
+                    if grayed {
+                        onGrayedTap?()
+                    } else {
+                        presented.toggle()
+                    }
                 }
         )
         .onChange(of: presented) { newValue in
             close()
-            if newValue {
-                let hostingView = NSHostingView(rootView: PopupView(entries: entries, selectedEntry: selected) { entry in
-                    selected = entry
-                    presented = false
-                    close()
-                })
-                
-                let panel = SelectPanel(
-                    contentRect: rect,
-                    styleMask: [],
-                    backing: .buffered,
-                    defer: false
-                )
-                panel.contentView = hostingView
-                panel.backgroundColor = .clear
-                panel.hidesOnDeactivate = true
-                
-                self.observer = NotificationCenter.default.addObserver(
-                    forName: NSWindow.didResignKeyNotification,
-                    object: panel,
-                    queue: .main
-                ) { _ in
-                    self.presented = false
-                    self.close()
+            if newValue, !grayed {
+                // 每次展开前按当前窗口位置重新换算，避免移动窗口后面板出现在旧位置
+                recalculateRect()
+                if rect == .zero {
+                    // 布局尚未就绪（例如首次出现），下一帧再试一次
+                    let workItem: DispatchWorkItem = .init { [self] in
+                        recalculateRect()
+                        presentPanel()
+                    }
+                    retryWorkItem = workItem
+                    DispatchQueue.main.async(execute: workItem)
+                } else {
+                    presentPanel()
                 }
-                
-                panel.makeKeyAndOrderFront(nil)
-                
-                self.panel = panel
-                installMouseMonitor()
             }
         }
         .onDisappear {
@@ -121,17 +129,76 @@ struct MySelect<Entry: Hashable & CustomStringConvertible>: View {
     }
     
     private var foregroundColor: Color {
-        hovered ? .color4 : .color5
+        if grayed { return .colorGray5 }
+        return hovered ? .color4 : .color5
     }
     
     private var backgroundColor: Color {
-        hovered ? .color7 : .white.opacity(0.5)
+        if grayed { return .colorGray8 }
+        return hovered ? .color7 : .white.opacity(0.5)
+    }
+    
+    private var textColor: Color {
+        grayed ? .colorGray4 : .color1
+    }
+    
+    private func presentPanel() {
+        guard rect != .zero else { return }
+        let hostingView = NSHostingView(rootView: PopupView(entries: entries, selectedEntry: selected) { entry in
+            selected = entry
+            presented = false
+            close()
+        })
+        
+        let panel = SelectPanel(
+            contentRect: rect,
+            styleMask: [],
+            backing: .buffered,
+            defer: false
+        )
+        panel.contentView = hostingView
+        panel.backgroundColor = .clear
+        panel.hidesOnDeactivate = true
+        
+        self.observer = NotificationCenter.default.addObserver(
+            forName: NSWindow.didResignKeyNotification,
+            object: panel,
+            queue: .main
+        ) { _ in
+            self.presented = false
+            self.close()
+        }
+        
+        // 面板打开期间窗口被拖动时同步跟随
+        if let hostingWindow {
+            self.moveObserver = NotificationCenter.default.addObserver(
+                forName: NSWindow.didMoveNotification,
+                object: hostingWindow,
+                queue: .main
+            ) { _ in
+                self.recalculateRect()
+                self.panel?.setFrame(self.rect, display: true)
+            }
+        }
+        
+        panel.makeKeyAndOrderFront(nil)
+        
+        self.panel = panel
+        installMouseMonitor()
     }
     
     private func close() {
         if let observer {
             NotificationCenter.default.removeObserver(observer)
             self.observer = nil
+        }
+        if let moveObserver {
+            NotificationCenter.default.removeObserver(moveObserver)
+            self.moveObserver = nil
+        }
+        if let retryWorkItem {
+            retryWorkItem.cancel()
+            self.retryWorkItem = nil
         }
         removeMouseMonitor()
         panel?.close()
@@ -166,26 +233,53 @@ struct MySelect<Entry: Hashable & CustomStringConvertible>: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: workItem)
     }
     
-    private func recalculateRect(proxy: GeometryProxy) {
-        guard let window = NSApplication.shared.windows.first,
+    private func updateLayout(_ proxy: GeometryProxy) {
+        localFrame = proxy.frame(in: .global)
+        itemSize = proxy.size
+    }
+    
+    /// 把下拉框在窗口内的位置换算成屏幕坐标。
+    /// 注意：`.global` 坐标相对窗口内容，窗口移动时不会变化，
+    /// 因此展示面板前必须重新计算，不能只在 onAppear 时缓存。
+    private func recalculateRect() {
+        guard itemSize.height > 0,
+              let window = hostingWindow ?? NSApplication.shared.keyWindow,
               let contentView = window.contentView else { return }
         
-        let global = proxy.frame(in: .global)
         let contentHeight = contentView.bounds.height
-        let popupHeight = proxy.size.height * min(CGFloat(entries.count), 5.5)
+        let popupHeight = itemSize.height * min(CGFloat(entries.count), 5.5)
         let rectInWindow = NSRect(
-            x: global.minX,
-            y: contentHeight - (global.minY - 1) - proxy.size.height - popupHeight,
-            width: global.width,
+            x: localFrame.minX,
+            y: contentHeight - (localFrame.minY - 1) - itemSize.height - popupHeight,
+            width: localFrame.width,
             height: popupHeight
         )
         rect = window.convertToScreen(rectInWindow)
         selectRect = window.convertToScreen(NSRect(
-            x: global.minX,
-            y: contentHeight - (global.minY - 1) - proxy.size.height,
-            width: global.width,
-            height: proxy.size.height
+            x: localFrame.minX,
+            y: contentHeight - (localFrame.minY - 1) - itemSize.height,
+            width: localFrame.width,
+            height: itemSize.height
         ))
+    }
+}
+
+/// 获取 SwiftUI 视图所在的 NSWindow。
+private struct WindowAccessor: NSViewRepresentable {
+    let callback: (NSWindow?) -> Void
+    
+    func makeNSView(context: Context) -> NSView {
+        let view: NSView = .init()
+        DispatchQueue.main.async {
+            callback(view.window)
+        }
+        return view
+    }
+    
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            callback(nsView.window)
+        }
     }
 }
 

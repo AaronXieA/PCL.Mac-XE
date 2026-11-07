@@ -352,7 +352,12 @@ private struct ResourceListItem: View {
                     hint("未找到 \(resource.fileName) 对应的远端资源信息！", type: .critical)
                     return
                 }
-                AppRouter.shared.append(.projectInstall(project: info, instanceId: nil))
+                AppRouter.shared.append(.projectInstall(
+                    project: info,
+                    target: .current,
+                    filterVersion: nil,
+                    filterLoader: nil
+                ))
             } catch {
                 err("获取资源信息失败：\(error.localizedDescription)")
                 hint("获取资源信息失败：\(error.localizedDescription)", type: .critical)

@@ -30,7 +30,12 @@ struct ResourcesSearchPage: View {
                             ForEach(searchResults) { project in
                                 ProjectListItemView(project: project)
                                     .onTapGesture {
-                                        AppRouter.shared.append(.projectInstall(project: project, instanceId: viewModel.installTarget.id))
+                                        AppRouter.shared.append(.projectInstall(
+                                            project: project,
+                                            target: viewModel.installTarget,
+                                            filterVersion: viewModel.gameVersion.id,
+                                            filterLoader: viewModel.loader.loader
+                                        ))
                                     }
                             }
                         }
@@ -72,14 +77,18 @@ struct ResourcesSearchPage: View {
                 HStack(spacing: 12) {
                     MySelect($viewModel.sort, entries: SearchSort.allCases)
                         .frame(maxWidth: .infinity)
-                    MySelect($viewModel.gameVersion, entries: gameVersionOptions)
-                        .frame(maxWidth: .infinity)
+                    MySelect($viewModel.gameVersion, entries: gameVersionOptions, grayed: isInstanceSelected) {
+                        viewModel.installTarget = .none
+                    }
+                    .frame(maxWidth: .infinity)
                 }
                 
                 HStack(spacing: 12) {
                     if viewModel.type == .mod || viewModel.type == .modpack {
-                        MySelect($viewModel.loader, entries: loaderOptions)
-                            .frame(maxWidth: .infinity)
+                        MySelect($viewModel.loader, entries: loaderOptions, grayed: isInstanceSelected) {
+                            viewModel.installTarget = .none
+                        }
+                        .frame(maxWidth: .infinity)
                     }
                     if viewModel.type == .mod {
                         MySelect($viewModel.category, entries: categoryOptions)
@@ -128,7 +137,14 @@ struct ResourcesSearchPage: View {
             .flatMap { repository in Array((repository.instances ?? [:]).values) }
             .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
         options.append(contentsOf: allInstances.map { .init(id: $0.id, name: $0.name) })
+        options.append(.none)
         return options
+    }
+    
+    /// 是否已选定实例（此时版本 / 加载器筛选器置灰，点击即切换为“不选择”）。
+    private var isInstanceSelected: Bool {
+        if case .none = viewModel.installTarget.kind { return false }
+        return true
     }
     
     private static let modCategories: [String] = [

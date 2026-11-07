@@ -56,10 +56,35 @@ struct CategoryFilter: Hashable, CustomStringConvertible {
 
 /// 安装目标实例。
 struct InstallTarget: Hashable, CustomStringConvertible {
-    let id: UUID?
+    enum Kind: Hashable {
+        /// 不选择实例，只按版本 / 加载器筛选
+        case none
+        /// 使用当前选中的实例
+        case current
+        /// 指定实例
+        case specific(UUID)
+    }
+    
+    let kind: Kind
     let name: String
     
-    static let current: InstallTarget = .init(id: nil, name: "当前实例")
+    static let current: InstallTarget = .init(kind: .current, name: "当前实例")
+    static let none: InstallTarget = .init(kind: .none, name: "不选择")
+    
+    init(kind: Kind, name: String) {
+        self.kind = kind
+        self.name = name
+    }
+    
+    init(id: UUID, name: String) {
+        self.kind = .specific(id)
+        self.name = name
+    }
+    
+    var id: UUID? {
+        if case .specific(let id) = kind { return id }
+        return nil
+    }
     
     var description: String { name }
 }

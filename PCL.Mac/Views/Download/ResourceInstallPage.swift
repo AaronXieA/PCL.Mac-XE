@@ -14,11 +14,21 @@ struct ResourceInstallPage: View {
     @State private var currentPage: Int = 0
     
     private let instanceManager: InstanceManager
-    private let targetInstanceId: UUID?
+    private let target: InstallTarget
+    private let filterVersion: String?
+    private let filterLoader: ModLoader?
     
-    init(instanceManager: InstanceManager, project: ProjectListItemModel, instanceId: UUID?) {
+    init(
+        instanceManager: InstanceManager,
+        project: ProjectListItemModel,
+        target: InstallTarget,
+        filterVersion: String?,
+        filterLoader: ModLoader?
+    ) {
         self.instanceManager = instanceManager
-        self.targetInstanceId = instanceId
+        self.target = target
+        self.filterVersion = filterVersion
+        self.filterLoader = filterLoader
         self._viewModel = .init(wrappedValue: .init(project: project))
         self._instanceVM = .init(wrappedValue: InstanceViewModel(instanceManager: instanceManager))
     }
@@ -37,8 +47,23 @@ struct ResourceInstallPage: View {
                 .frame(height: 35)
             }
             if viewModel.loaded, let versionList = viewModel.versionList {
-                if currentPage == 0, let selectedVersionGroup = viewModel.selectedVersionGroup {
-                    versionCard(versionGroup: selectedVersionGroup, isSelected: true, folded: false)
+                if currentPage == 0 {
+                    // 有筛选器时，筛选器命中的最佳版本排在前面
+                    if let filteredVersionGroup = viewModel.filteredVersionGroup {
+                        versionCard(
+                            versionGroup: filteredVersionGroup,
+                            title: "最佳版本：\(filteredVersionGroup.0.description)（筛选器）",
+                            folded: false
+                        )
+                    }
+                    if let selectedVersionGroup = viewModel.selectedVersionGroup {
+                        let suffix: String = viewModel.hasFilter ? "（当前实例）" : ""
+                        versionCard(
+                            versionGroup: selectedVersionGroup,
+                            title: "最佳版本：\(selectedVersionGroup.0.description)\(suffix)",
+                            folded: false
+                        )
+                    }
                 }
                 PaginatedContainer(versionList, id: \.0, currentPage: $currentPage, viewsPerPage: 10) { versionGroup in
                     versionCard(versionGroup: versionGroup, folded: versionList.count == 1 ? false : true)
@@ -50,7 +75,12 @@ struct ResourceInstallPage: View {
         }
         .task(id: viewModel.project) {
             do {
-                try await viewModel.load(selectedInstance: resolveTargetInstance())
+                try await viewModel.load(
+                    // “当前实例”永远指游戏主页面当前选中的实例，与搜索页的安装目标无关
+                    selectedInstance: instanceVM.currentInstance,
+                    filterVersion: filterVersion,
+                    filterLoader: filterLoader
+                )
             } catch let error where error.isCancellationError {
             } catch {
                 err("加载\(viewModel.project.type.localizedName) \(viewModel.project.title) 版本列表失败：\(error)")
@@ -59,24 +89,30 @@ struct ResourceInstallPage: View {
         }
     }
     
-    /// 解析搜索页指定的安装目标实例；未指定或实例已被删除时回退到当前实例。
+    /// 解析搜索页指定的安装目标；未指定或实例已被删除时回退到当前实例。
     private func resolveTargetInstance() -> MinecraftInstance? {
-        guard let targetInstanceId else {
+        switch target.kind {
+        case .none:
+            return nil
+        case .current:
+            return instanceVM.currentInstance
+        case .specific(let id):
+            for repository in instanceManager.repositories.values {
+                if let instance = repository.instance(id: id) {
+                    return instance
+                }
+            }
+            hint("所选实例已不存在，已回退到当前实例。", type: .critical)
             return instanceVM.currentInstance
         }
-        for repository in instanceManager.repositories.values {
-            if let instance = repository.instance(id: targetInstanceId) {
-                return instance
-            }
-        }
-        hint("所选实例已不存在，已回退到当前实例。", type: .critical)
-        return instanceVM.currentInstance
     }
     
     /// 搜索页指定实例所在的仓库，未指定时返回当前仓库。
     private var targetRepository: MinecraftRepository {
-        guard let targetInstanceId else { return instanceVM.currentRepository }
-        return instanceManager.repositories.values.first { $0.contains(id: targetInstanceId) } ?? instanceVM.currentRepository
+        if case .specific(let id) = target.kind {
+            return instanceManager.repositories.values.first { $0.contains(id: id) } ?? instanceVM.currentRepository
+        }
+        return instanceVM.currentRepository
     }
     
     private func onVersionTap(_ version: ProjectVersionModel) async throws {
@@ -175,8 +211,8 @@ struct ResourceInstallPage: View {
     }
     
     @ViewBuilder
-    private func versionCard(versionGroup: ResourceInstallViewModel.VersionGroup, isSelected: Bool = false, folded: Bool = true) -> some View {
-        MyCard((isSelected ? "最佳版本：" : "") + versionGroup.0.description, folded: folded) {
+    private func versionCard(versionGroup: ResourceInstallViewModel.VersionGroup, title: String? = nil, folded: Bool = true) -> some View {
+        MyCard(title ?? versionGroup.0.description, folded: folded) {
             let dependencies: [ProjectVersionModel.Dependency] = versionGroup.1[0].requiredDependencies
             if !dependencies.isEmpty {
                 VStack(alignment: .leading) {
@@ -185,7 +221,12 @@ struct ResourceInstallPage: View {
                         ForEach(dependencies) { dependency in
                             ProjectListItemView(project: dependency.project)
                                 .onTapGesture {
-                                    AppRouter.shared.append(.projectInstall(project: dependency.project, instanceId: targetInstanceId))
+                                    AppRouter.shared.append(.projectInstall(
+                                        project: dependency.project,
+                                        target: .current,
+                                        filterVersion: nil,
+                                        filterLoader: nil
+                                    ))
                                 }
                         }
                     }
