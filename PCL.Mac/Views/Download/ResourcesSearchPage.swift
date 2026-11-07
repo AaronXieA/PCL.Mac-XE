@@ -219,8 +219,14 @@ struct ProjectListItemView: View {
                 .padding(.leading, 4)
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    MyText(project.title, size: 16)
-                        .lineLimit(1)
+                    HStack(spacing: 6) {
+                        MyText(project.title, size: 16)
+                            .lineLimit(1)
+                        if let chineseTitle = project.chineseTitle {
+                            MyText(chineseTitle, size: 13, color: .colorGray2)
+                                .lineLimit(1)
+                        }
+                    }
                     
                     if isTagRowSeparated {
                         ScrollView(.horizontal, showsIndicators: false) {

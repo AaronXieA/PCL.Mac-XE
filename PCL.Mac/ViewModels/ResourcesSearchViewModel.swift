@@ -145,6 +145,64 @@ class ResourcesSearchViewModel: ObservableObject {
             searchResults = nil
         }
         
+        let chinesePlan: ChineseModSearchPlan? = try await chinesePlanIfNeeded(for: query)
+        
+        if let chinesePlan {
+            let response: ModrinthAPIClient.SearchResponse
+            var directProjects: [ModrinthProject] = []
+            
+            if pageIndex == 0 {
+                async let searchRequest = ModrinthAPIClient.shared.search(
+                    type: type,
+                    chinesePlan.englishQuery,
+                    forVersion: gameVersion.id,
+                    loaders: loader.modrinthValue,
+                    categories: category.slug.map { [$0] } ?? [],
+                    index: sort.rawValue,
+                    pageIndex: pageIndex
+                )
+                async let projectsRequest = ModrinthAPIClient.shared.projects(Array(chinesePlan.slugs.prefix(20)))
+                response = try await searchRequest
+                directProjects = (try? await projectsRequest) ?? []
+            } else {
+                response = try await ModrinthAPIClient.shared.search(
+                    type: type,
+                    chinesePlan.englishQuery,
+                    forVersion: gameVersion.id,
+                    loaders: loader.modrinthValue,
+                    categories: category.slug.map { [$0] } ?? [],
+                    index: sort.rawValue,
+                    pageIndex: pageIndex
+                )
+            }
+            try Task.checkCancellation()
+            
+            let slugOrder: [String: Int] = Dictionary(uniqueKeysWithValues: chinesePlan.slugs.enumerated().map {
+                ($0.element, $0.offset)
+            })
+            directProjects.sort { lhs, rhs in
+                (slugOrder[lhs.slug] ?? Int.max) < (slugOrder[rhs.slug] ?? Int.max)
+            }
+            
+            var merged: [ModrinthProject] = []
+            var seenProjectIds: Set<String> = []
+            for project in directProjects + response.hits {
+                guard seenProjectIds.insert(project.id).inserted else { continue }
+                merged.append(project)
+            }
+            
+            let results: [ProjectListItemModel] = merged
+                .filter { $0.clientCompatibility != .unsupported }
+                .map { ProjectListItemModel($0, chineseTitle: chinesePlan.chineseNames[$0.slug]) }
+            
+            await MainActor.run {
+                guard searchToken == token else { return }
+                lastSearchResponse = response
+                searchResults = results
+            }
+            return
+        }
+        
         let response: ModrinthAPIClient.SearchResponse = try await ModrinthAPIClient.shared.search(
             type: type,
             query,
@@ -158,7 +216,7 @@ class ResourcesSearchViewModel: ObservableObject {
         
         let results: [ProjectListItemModel] = response.hits
             .filter { $0.clientCompatibility != .unsupported }
-            .map(ProjectListItemModel.init(_:))
+            .map { ProjectListItemModel($0) }
         
         await MainActor.run {
             // 丢弃过期的搜索结果，避免快速切换筛选条件时出现旧数据
@@ -170,5 +228,33 @@ class ResourcesSearchViewModel: ObservableObject {
     
     public func changePage(_ page: Int) async throws {
         try await search(query, pageIndex: page)
+    }
+    
+    // MARK: - 中文搜索
+    
+    private enum ChineseSearchLookup: Sendable {
+        case unavailable
+        case noMatch
+        case plan(ChineseModSearchPlan)
+    }
+    
+    /// 中文查询转换为搜索计划；非中文查询或索引缺失时返回 `nil`。
+    private func chinesePlanIfNeeded(for query: String) async throws -> ChineseModSearchPlan? {
+        guard type == .mod, ChineseModSearchIndex.isChineseQuery(query) else { return nil }
+        
+        let lookup: ChineseSearchLookup = await Task.detached(priority: .userInitiated) {
+            guard let index = ChineseModSearchIndex.shared else { return .unavailable }
+            guard let plan = index.plan(for: query) else { return .noMatch }
+            return .plan(plan)
+        }.value
+        
+        switch lookup {
+        case .unavailable:
+            return nil
+        case .noMatch:
+            throw ChineseSearchNoResultError()
+        case .plan(let plan):
+            return plan
+        }
     }
 }

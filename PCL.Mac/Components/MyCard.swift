@@ -12,6 +12,7 @@ struct MyCard<Content: View, Action: View>: View {
     @Environment(\.disableCardAppearAnimation) private var disableCardAppearAnimation: Bool
     @Environment(\.disableHoverAnimation) private var disableHoverAnimation: Bool
     @EnvironmentObject private var interactionState: CardInteractionState
+    @ObservedObject private var backgroundManager: BackgroundManager = .shared
     
     /// 下移出现动画变量。
     @State private var appeared: Bool = false
@@ -141,7 +142,7 @@ struct MyCard<Content: View, Action: View>: View {
         }
         .background {
             RoundedRectangle(cornerRadius: 5)
-                .fill(Color.colorGray8)
+                .fill(backgroundManager.image != nil ? Color.colorBg1 : Color.colorGray8)
                 .shadow(color: showHovered ? .color3.opacity(0.6) : .black.opacity(0.1), radius: 6)
         }
         .offset(y: appeared ? 0 : -25)

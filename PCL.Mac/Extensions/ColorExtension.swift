@@ -19,7 +19,7 @@ extension Color {
     static let color7: Color = .init(0xe0eafd)
     static let color8: Color = .init(0xeaf2fe)
     static let colorBg0: Color = .init(0x96c0f9)
-    static let colorBg1: Color = .init(0xe0eafd, alpha: 0.75)
+    static let colorBg1: Color = .init(0xe0eafd, alpha: 0.88)
     static let colorGray1: Color = .init(0x404040)
     static let colorGray2: Color = .init(0x737373)
     static let colorGray3: Color = .init(0x8c8c8c)

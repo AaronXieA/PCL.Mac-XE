@@ -61,6 +61,8 @@ class LauncherConfig: Codable {
     public var homepageType: HomepageType = .empty
     public var enabledFlags: Set<FeatureFlag>?
     public var customJavaRuntimes: [URL] = []
+    public var backgroundImagePath: String?
+    public var backgroundDisplayMode: BackgroundDisplayMode = .smart
     
     public init() {}
     
@@ -89,6 +91,8 @@ class LauncherConfig: Codable {
         self.homepageType = try container.decodeIfPresent(HomepageType.self, forKey: .homepageType) ?? .empty
         self.enabledFlags = try container.decodeIfPresent(Set<FeatureFlag>.self, forKey: .enabledFlags)
         self.customJavaRuntimes = try container.decodeIfPresent([URL].self, forKey: .customJavaRuntimes) ?? []
+        self.backgroundImagePath = try container.decodeIfPresent(String.self, forKey: .backgroundImagePath)
+        self.backgroundDisplayMode = try container.decodeIfPresent(BackgroundDisplayMode.self, forKey: .backgroundDisplayMode) ?? .smart
     }
     
     public func encode(to encoder: any Encoder) throws {
@@ -108,6 +112,8 @@ class LauncherConfig: Codable {
         try container.encode(homepageType, forKey: .homepageType)
         try container.encodeIfPresent(enabledFlags, forKey: .enabledFlags)
         try container.encode(customJavaRuntimes, forKey: .customJavaRuntimes)
+        try container.encode(backgroundImagePath, forKey: .backgroundImagePath)
+        try container.encode(backgroundDisplayMode, forKey: .backgroundDisplayMode)
     }
     
     public static func save(_ config: LauncherConfig = .shared, to url: URL = URLConstants.configURL) throws {
@@ -131,6 +137,21 @@ class LauncherConfig: Codable {
         case homepageType
         case enabledFlags
         case customJavaRuntimes
+        case backgroundImagePath
+        case backgroundDisplayMode
+    }
+    
+    enum BackgroundDisplayMode: String, Codable, CaseIterable, CustomStringConvertible {
+        case smart, fit, tile, center
+        
+        var description: String {
+            switch self {
+            case .smart: "智能"
+            case .fit: "适应"
+            case .tile: "平铺"
+            case .center: "居中"
+            }
+        }
     }
     
     enum HomepageType: String, Codable, CustomStringConvertible {

@@ -19,8 +19,9 @@ struct ProjectListItemModel: Identifiable, Equatable, Hashable {
     public let onlySupportsSnapshot: Bool
     public let downloads: String
     public let lastUpdate: String
+    public let chineseTitle: String?
     
-    public init(id: String, title: String, description: String, type: ResourceType, iconURL: URL?, tags: [String], supportDescription: String, onlySupportsSnapshot: Bool, downloads: String, lastUpdate: String) {
+    public init(id: String, title: String, description: String, type: ResourceType, iconURL: URL?, tags: [String], supportDescription: String, onlySupportsSnapshot: Bool, downloads: String, lastUpdate: String, chineseTitle: String? = nil) {
         self.id = id
         self.title = title
         self.description = description
@@ -31,9 +32,10 @@ struct ProjectListItemModel: Identifiable, Equatable, Hashable {
         self.onlySupportsSnapshot = onlySupportsSnapshot
         self.downloads = downloads
         self.lastUpdate = lastUpdate
+        self.chineseTitle = chineseTitle
     }
     
-    public init(_ project: ModrinthProject) {
+    public init(_ project: ModrinthProject, chineseTitle: String? = nil) {
         let (supportDescription, onlySupportsSnapshot) = Self.generateSupportDescription(for: project)
         
         self.init(
@@ -46,7 +48,8 @@ struct ProjectListItemModel: Identifiable, Equatable, Hashable {
             supportDescription: supportDescription,
             onlySupportsSnapshot: onlySupportsSnapshot,
             downloads: Self.formatDownloads(project.downloads),
-            lastUpdate: Self.formatLastUpdate(project.lastUpdate)
+            lastUpdate: Self.formatLastUpdate(project.lastUpdate),
+            chineseTitle: chineseTitle
         )
     }
     

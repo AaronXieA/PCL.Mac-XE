@@ -13,6 +13,8 @@ struct ContentView: View {
     @ObservedObject private var hintManager: HintManager = .shared
     @ObservedObject private var router: AppRouter = .shared
     @ObservedObject private var easterEggManager: EasterEggManager = .shared
+    @ObservedObject private var messageBoxManager: MessageBoxManager = .shared
+    @ObservedObject private var backgroundManager: BackgroundManager = .shared
     
     @EnvironmentObject private var instanceManager: InstanceManager
     
@@ -28,7 +30,6 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay { ExtraButtonsOverlay() }
-        .overlay { MessageBoxOverlay() }
         .overlay {
             VStack(alignment: .leading, spacing: 16) {
                 Spacer()
@@ -40,7 +41,13 @@ struct ContentView: View {
             .animation(.easeOut(duration: 0.2), value: hintManager.hints)
             .padding(.bottom, 100)
         }
-        .background(Color(0xC0DEF5))
+        // 弹窗打开期间彻底禁用下层视图的命中测试，
+        // 避免鼠标不动直接再次点击时仍能触发弹窗下方的按钮
+        .allowsHitTesting(messageBoxManager.currentMessageBox == nil)
+        .overlay { MessageBoxOverlay() }
+        .background {
+            AppBackgroundView(image: backgroundManager.image, mode: backgroundManager.mode)
+        }
         .rotation3DEffect(easterEggManager.rotationAngle, axis: easterEggManager.rotationAxis)
         .contrast(easterEggManager.modifyColor ? -1 : 1)
         .onDrop(of: [UTType.fileURL], isTargeted: nil) { providers in

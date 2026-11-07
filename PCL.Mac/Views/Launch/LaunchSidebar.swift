@@ -16,6 +16,7 @@ struct LaunchSidebar: Sidebar {
 
     @State private var showToolbar: Bool = false
     @State private var toolbarHovered: Bool = false
+    @ObservedObject private var backgroundManager: BackgroundManager = .shared
 
     init(instanceManager: InstanceManager) {
         self._instanceVM = StateObject(wrappedValue: InstanceViewModel(instanceManager: instanceManager))
@@ -162,7 +163,7 @@ struct LaunchSidebar: Sidebar {
         .padding(.vertical, 6)
         .background {
             RoundedRectangle(cornerRadius: 8)
-                .fill(Color.colorGray8)
+                .fill(backgroundManager.image != nil ? Color.colorBg1 : Color.colorGray8)
                 .shadow(
                     color: toolbarHovered ? .color3.opacity(0.6) : .black.opacity(0.15),
                     radius: toolbarHovered ? 6 : 8

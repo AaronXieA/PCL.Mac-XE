@@ -160,6 +160,7 @@ struct AppRouterView: View {
 struct AppSidebarView: View {
     @EnvironmentObject private var instanceManager: InstanceManager
     @ObservedObject private var router: AppRouter = .shared
+    @ObservedObject private var backgroundManager: BackgroundManager = .shared
     @State private var width: CGFloat = 0
     @State private var animationProgress: Double = 0
     
@@ -182,7 +183,7 @@ struct AppSidebarView: View {
     var body: some View {
         ZStack(alignment: .leading) {
             Rectangle()
-                .fill(.white)
+                .fill(backgroundManager.image != nil ? Color.colorBg1 : .white)
                 .frame(width: width)
                 .shadow(radius: 2)
                 .zIndex(10)
