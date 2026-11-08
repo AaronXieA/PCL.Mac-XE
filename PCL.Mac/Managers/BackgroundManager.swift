@@ -14,6 +14,7 @@ final class BackgroundManager: ObservableObject {
 
     @Published private(set) var image: NSImage?
     @Published private(set) var mode: LauncherConfig.BackgroundDisplayMode
+    @Published private(set) var opacity: Double
     @Published private(set) var fileName: String?
 
     private static let directoryURL: URL = URLConstants.applicationSupportURL.appending(path: "Background")
@@ -29,6 +30,7 @@ final class BackgroundManager: ObservableObject {
     private init() {
         let path: String? = LauncherConfig.shared.backgroundImagePath
         self.mode = LauncherConfig.shared.backgroundDisplayMode
+        self.opacity = LauncherConfig.shared.backgroundOpacity
         self.image = path.flatMap { NSImage(contentsOfFile: $0) }
         self.fileName = path.map { URL(fileURLWithPath: $0).lastPathComponent }
     }
@@ -68,6 +70,17 @@ final class BackgroundManager: ObservableObject {
             try LauncherConfig.save()
         } catch {
             err("清除背景图片配置失败：\(error.localizedDescription)")
+        }
+    }
+
+    /// 更新背景图片不透明度。
+    func setOpacity(_ opacity: Double) {
+        self.opacity = min(max(opacity, 0), 1)
+        LauncherConfig.shared.backgroundOpacity = self.opacity
+        do {
+            try LauncherConfig.save()
+        } catch {
+            err("保存背景不透明度失败：\(error.localizedDescription)")
         }
     }
 

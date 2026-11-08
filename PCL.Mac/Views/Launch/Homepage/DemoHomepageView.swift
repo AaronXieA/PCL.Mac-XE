@@ -11,6 +11,8 @@ struct DemoHomepageView: View {
     @StateObject private var loadingModel: MyLoadingViewModel = .init(text: "MyLoading 测试")
     @State private var selectedEntry: String = "下拉选择框"
     @State private var input: String = ""
+    @State private var disabledEntry: String = "被禁用的下拉框"
+    @State private var selectDisabled: Bool = true
     
     private let listItems: [ListItem] = [
         .init(name: "name1", description: "desc1"),
@@ -138,6 +140,15 @@ struct DemoHomepageView: View {
             MyCard("其它控件", folded: false) {
                 MySelect($selectedEntry, entries: entries)
                 MyTextField(text: $input, placeholder: "文本输入框")
+                HStack(spacing: 12) {
+                    MySelect($disabledEntry, entries: entries, grayed: selectDisabled) {
+                        selectDisabled = false
+                    }
+                    MyButton("disable()") {
+                        selectDisabled = true
+                    }
+                    .frame(width: 120, height: 26)
+                }
             }
         }
     }

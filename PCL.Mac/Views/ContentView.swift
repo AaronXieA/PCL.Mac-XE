@@ -46,7 +46,7 @@ struct ContentView: View {
         .allowsHitTesting(messageBoxManager.currentMessageBox == nil)
         .overlay { MessageBoxOverlay() }
         .background {
-            AppBackgroundView(image: backgroundManager.image, mode: backgroundManager.mode)
+            AppBackgroundView(image: backgroundManager.image, mode: backgroundManager.mode, opacity: backgroundManager.opacity)
         }
         .rotation3DEffect(easterEggManager.rotationAngle, axis: easterEggManager.rotationAxis)
         .contrast(easterEggManager.modifyColor ? -1 : 1)

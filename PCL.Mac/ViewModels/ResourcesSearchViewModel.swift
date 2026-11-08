@@ -184,9 +184,26 @@ class ResourcesSearchViewModel: ObservableObject {
                 (slugOrder[lhs.slug] ?? Int.max) < (slugOrder[rhs.slug] ?? Int.max)
             }
             
+            // 按当前排序方式合并直接命中的中文模组与接口结果，
+            // 避免直连模组始终置顶导致“相关度 / 下载量”等排序看似失效。
+            let orderedProjects: [ModrinthProject]
+            switch sort {
+            case .relevance:
+                orderedProjects = directProjects + response.hits
+            case .downloads:
+                orderedProjects = (directProjects + response.hits)
+                    .sorted { $0.downloads > $1.downloads }
+            case .updated:
+                orderedProjects = (directProjects + response.hits)
+                    .sorted { $0.lastUpdate > $1.lastUpdate }
+            case .follows, .newest:
+                // 接口结果已按关注量 / 发布时间排序，直接命中的模组置于其后。
+                orderedProjects = response.hits + directProjects
+            }
+            
             var merged: [ModrinthProject] = []
             var seenProjectIds: Set<String> = []
-            for project in directProjects + response.hits {
+            for project in orderedProjects {
                 guard seenProjectIds.insert(project.id).inserted else { continue }
                 merged.append(project)
             }

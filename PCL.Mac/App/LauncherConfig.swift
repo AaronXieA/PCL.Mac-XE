@@ -63,6 +63,7 @@ class LauncherConfig: Codable {
     public var customJavaRuntimes: [URL] = []
     public var backgroundImagePath: String?
     public var backgroundDisplayMode: BackgroundDisplayMode = .smart
+    public var backgroundOpacity: Double = 1.0
     
     public init() {}
     
@@ -93,6 +94,7 @@ class LauncherConfig: Codable {
         self.customJavaRuntimes = try container.decodeIfPresent([URL].self, forKey: .customJavaRuntimes) ?? []
         self.backgroundImagePath = try container.decodeIfPresent(String.self, forKey: .backgroundImagePath)
         self.backgroundDisplayMode = try container.decodeIfPresent(BackgroundDisplayMode.self, forKey: .backgroundDisplayMode) ?? .smart
+        self.backgroundOpacity = try container.decodeIfPresent(Double.self, forKey: .backgroundOpacity) ?? 1.0
     }
     
     public func encode(to encoder: any Encoder) throws {
@@ -114,6 +116,7 @@ class LauncherConfig: Codable {
         try container.encode(customJavaRuntimes, forKey: .customJavaRuntimes)
         try container.encode(backgroundImagePath, forKey: .backgroundImagePath)
         try container.encode(backgroundDisplayMode, forKey: .backgroundDisplayMode)
+        try container.encode(backgroundOpacity, forKey: .backgroundOpacity)
     }
     
     public static func save(_ config: LauncherConfig = .shared, to url: URL = URLConstants.configURL) throws {
@@ -139,6 +142,7 @@ class LauncherConfig: Codable {
         case customJavaRuntimes
         case backgroundImagePath
         case backgroundDisplayMode
+        case backgroundOpacity
     }
     
     enum BackgroundDisplayMode: String, Codable, CaseIterable, CustomStringConvertible {

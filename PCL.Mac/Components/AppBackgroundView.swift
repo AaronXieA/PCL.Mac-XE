@@ -11,6 +11,7 @@ import SwiftUI
 struct AppBackgroundView: View {
     let image: NSImage?
     let mode: LauncherConfig.BackgroundDisplayMode
+    var opacity: Double = 1.0
 
     /// PCL2 ColorBg1 的微蓝色遮罩。
     private static let overlayColor: Color = .init(
@@ -27,6 +28,7 @@ struct AppBackgroundView: View {
 
                 if let image {
                     BackgroundImageLayer(image: image, mode: mode, size: geometry.size)
+                        .opacity(opacity)
                     Self.overlayColor.opacity(Self.overlayOpacity)
                 }
             }

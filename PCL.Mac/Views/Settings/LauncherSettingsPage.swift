@@ -73,6 +73,29 @@ struct LauncherSettingsPage: View {
                 .onChange(of: backgroundMode) { newValue in
                     backgroundManager.setMode(newValue)
                 }
+
+                if backgroundManager.image != nil {
+                    configLine(label: "不透明度") {
+                        HStack(spacing: 10) {
+                            Slider(
+                                value: Binding(
+                                    get: { backgroundManager.opacity },
+                                    set: { backgroundManager.setOpacity($0) }
+                                ),
+                                in: 0...1
+                            )
+                            .tint(Color.color3)
+                            .frame(maxWidth: 240)
+
+                            MyText(
+                                "\(Int(backgroundManager.opacity * 100))%",
+                                size: 13,
+                                color: .colorGray3
+                            )
+                            .frame(width: 42, alignment: .trailing)
+                        }
+                    }
+                }
             }
             .cardIndex(1)
         }

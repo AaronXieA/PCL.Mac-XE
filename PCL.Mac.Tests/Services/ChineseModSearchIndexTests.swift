@@ -49,4 +49,17 @@ struct ChineseModSearchIndexTests {
         #expect(!results.isEmpty)
         #expect(results.contains { $0.chineseTitle != nil })
     }
+
+    @Test @MainActor func testEnglishSearchSort() async throws {
+        let viewModel: ResourcesSearchViewModel = .init(type: .mod)
+        try await viewModel.search("sodium")
+        let relevanceIDs: [String] = try #require(viewModel.searchResults).map(\.id)
+
+        viewModel.sort = .downloads
+        try await viewModel.search("sodium")
+        let downloadIDs: [String] = try #require(viewModel.searchResults).map(\.id)
+
+        #expect(!relevanceIDs.isEmpty)
+        #expect(relevanceIDs != downloadIDs)
+    }
 }
